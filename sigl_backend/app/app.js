@@ -7,7 +7,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const cors = require('cors');
-
+const journalRoutes = require('./journal/routes');
 const app = express();
 
 // Environment validation
@@ -123,9 +123,6 @@ if (process.env.NODE_ENV === 'development') {
 const testRoutes = require('./test/routes');
 const userRoutes = require('./user/routes');
 const authRoutes = require('./auth/auth.routes');
-const calendarRoutes = require('./calendar/routes');
-const entretienRoutes = require('./entretien/entretien.routes');
-const soutenanceRoutes = require('./soutenance/soutenance.routes');
 
 // Health check route
 app.get('/status', (req, res) => {
@@ -141,9 +138,7 @@ app.get('/status', (req, res) => {
 // Routes registration
 app.use('/api/test', testRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/calendar', calendarRoutes);
-app.use('/api/entretiens', entretienRoutes);
-app.use('/api/soutenances', soutenanceRoutes);
+app.use('/api/journaux', journalRoutes);
 
 // Apply stricter rate limiting to auth endpoints
 app.use('/api/auth', authLimiter, authRoutes);
