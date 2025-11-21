@@ -92,7 +92,7 @@ const StudentDashboard = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'journal' && <JournalTab navigate={navigate} />}
         {activeTab === 'documents' && <DocumentsTab />}
-        {activeTab === 'calendar' && <CalendarTab />}
+        {activeTab === 'calendar' && <CalendarTab navigate={navigate} />}
         {activeTab === 'entretiens' && <EntretiensTab />}
         {activeTab === 'notifications' && <NotificationsTab />}
       </main>
@@ -289,49 +289,120 @@ const DocumentsTab = () => (
 );
 
 // Composant Calendrier
-const CalendarTab = () => (
-  <div className="space-y-6">
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">📅 Calendrier</h2>
-      <p className="text-gray-600 mb-6">
-        Consultez vos événements, soutenances et dates importantes.
-      </p>
+const CalendarTab = ({ navigate }) => {
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-      {/* Vue calendrier simplifiée */}
-      <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-        <div className="text-center text-gray-500 py-12">
-          <div className="text-6xl mb-4">📅</div>
-          <p className="text-lg">Calendrier interactif à venir</p>
-          <p className="text-sm mt-2">Intégration avec React Big Calendar</p>
-        </div>
-      </div>
+  // Chargement des événements à venir
+  React.useEffect(() => {
+    const loadUpcomingEvents = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:3000/api/calendar/events');
+        const data = await response.json();
+        
+        if (data.success) {
+          // Filtrer les événements futurs et prendre les 5 premiers
+          const now = new Date();
+          const futureEvents = data.data
+            .filter(event => new Date(event.date) >= now)
+            .slice(0, 5);
+          setUpcomingEvents(futureEvents);
+        } else {
+          setError('Erreur lors du chargement des événements');
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des événements:', error);
+        setError('Impossible de charger les événements');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      {/* Événements à venir */}
-      <div className="mt-6">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Événements à venir</h3>
-        <div className="space-y-3">
-          {[
-            { title: 'Soutenance Semestre 8', date: '2025-12-15', type: 'Soutenance' },
-            { title: 'Entretien Tuteur', date: '2025-11-25', type: 'Entretien' },
-            { title: 'Dépôt Mémoire Final', date: '2025-12-01', type: 'Échéance' },
-          ].map((event, index) => (
-            <div key={index} className="border-l-4 border-primary-600 bg-blue-50 p-4 rounded-r-lg">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-semibold text-gray-800">{event.title}</h4>
-                  <p className="text-sm text-gray-600 mt-1">📅 {event.date}</p>
-                </div>
-                <span className="px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-xs font-medium">
-                  {event.type}
-                </span>
-              </div>
+    loadUpcomingEvents();
+  }, []);
+
+  // Fonction pour formater la date
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  };
+
+  // Fonction pour obtenir le type d'événement basé sur la catégorie
+  const getEventType = (category) => {
+    const types = {
+      'réunion': 'Réunion',
+      'rendez-vous': 'Rendez-vous',
+      'culturel': 'Culturel',
+      'formation': 'Formation'
+    };
+    return types[category] || 'Événement';
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">📅 Calendrier</h2>
+        <p className="text-gray-600 mb-6">
+          Consultez vos événements, soutenances et dates importantes.
+        </p>
+
+        {/* Bouton pour accéder au calendrier complet */}
+        <button
+          onClick={() => navigate('/calendar')}
+          className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium mb-6 transition"
+        >
+          📅 Ouvrir le calendrier complet
+        </button>
+
+        {/* Événements à venir */}
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">Événements à venir</h3>
+          
+          {loading ? (
+            <div className="text-center py-4">
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+              <p className="mt-2 text-gray-600">Chargement des événements...</p>
             </div>
-          ))}
+          ) : error ? (
+            <div className="text-center py-4 text-red-600">
+              <p>{error}</p>
+            </div>
+          ) : upcomingEvents.length > 0 ? (
+            <div className="space-y-3">
+              {upcomingEvents.map((event) => (
+                <div key={event.id} className="border-l-4 border-primary-600 bg-blue-50 p-4 rounded-r-lg cursor-pointer hover:bg-blue-100 transition"
+                     onClick={() => navigate(`/calendar/event/${event.id}`)}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold text-gray-800">{event.title}</h4>
+                      <p className="text-sm text-gray-600 mt-1">📅 {formatDate(event.date)}</p>
+                      {event.time && (
+                        <p className="text-sm text-gray-500">🕒 {event.time}</p>
+                      )}
+                    </div>
+                    <span className="px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-xs font-medium">
+                      {getEventType(event.category)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>Aucun événement à venir</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Composant Entretiens
 const EntretiensTab = () => (
