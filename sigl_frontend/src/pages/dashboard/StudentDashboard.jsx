@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
-
+import journalService from '../../services/journalService';
 
 const StudentDashboard = () => {
   const [activeTab, setActiveTab] = useState('journal');
@@ -42,14 +42,17 @@ const StudentDashboard = () => {
               <div className="hidden md:flex items-center space-x-2">
                 <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                   <span className="text-primary-600 font-semibold text-sm">
-                    {currentUser?.firstName?.[0]}{currentUser?.lastName?.[0]}
+                    {currentUser?.firstName?.[0]}
+                    {currentUser?.lastName?.[0]}
                   </span>
                 </div>
                 <div className="text-sm">
                   <p className="font-medium text-gray-700">
                     {currentUser?.firstName} {currentUser?.lastName}
                   </p>
-                  <p className="text-xs text-gray-500">Apprenti - {currentUser?.role || 'APPRENTI'}</p>
+                  <p className="text-xs text-gray-500">
+                    Apprenti - {currentUser?.role || 'APPRENTI'}
+                  </p>
                 </div>
               </div>
               <button
@@ -104,25 +107,25 @@ const StudentDashboard = () => {
 const JournalTab = ({ navigate }) => {
   const [journaux, setJournaux] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Simuler le chargement des journaux depuis l'API
+  // Chargement des journaux depuis l'API
   React.useEffect(() => {
-    // TODO: Remplacer par un vrai appel API
     const fetchJournaux = async () => {
       try {
-        // Simulation d'appel API
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Pour l'instant, récupérer depuis localStorage (temporaire)
-        const savedJournaux = localStorage.getItem('journaux');
-        if (savedJournaux) {
-          const data = JSON.parse(savedJournaux);
-          // Trier par date (plus récent en premier)
-          const sorted = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          setJournaux(sorted);
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des journaux:', error);
+        setIsLoading(true);
+        setError(null);
+
+        const data = await journalService.getMyJournaux();
+
+        // Trier par date (plus récent en premier)
+        const sorted = [...data].sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+        setJournaux(sorted);
+      } catch (err) {
+        console.error('Erreur lors du chargement des journaux:', err);
+        setError("Impossible de charger vos journaux de formation.");
       } finally {
         setIsLoading(false);
       }
@@ -144,25 +147,35 @@ const JournalTab = ({ navigate }) => {
     return date.toLocaleDateString('fr-FR', {
       year: 'numeric',
       month: '2-digit',
-      day: '2-digit'
+      day: '2-digit',
     });
   };
 
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">📔 Journal de Formation</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">
+          📔 Journal de Formation
+        </h2>
         <p className="text-gray-600 mb-6">
-          Renseignez vos activités mensuelles et consultez l'historique de votre formation.
+          Renseignez vos activités mensuelles et consultez l&apos;historique de
+          votre formation.
         </p>
 
         {/* Bouton nouvelle note */}
-        <button 
+        <button
           onClick={() => navigate('/journal/create')}
           className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium mb-6 transition"
         >
           + Ajouter une note mensuelle
         </button>
+
+        {/* Erreur éventuelle */}
+        {error && (
+          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2 rounded">
+            {error}
+          </div>
+        )}
 
         {/* État de chargement */}
         {isLoading ? (
@@ -178,20 +191,28 @@ const JournalTab = ({ navigate }) => {
                 <h3 className="text-lg font-semibold text-gray-700 mb-3">
                   Notes enregistrées ({journaux.length})
                 </h3>
-                
+
                 {journaux.map((journal, index) => (
-                  <div 
-                    key={journal.id || index} 
+                  <div
+                    key={journal.id || index}
                     className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition cursor-pointer"
-                    onClick={() => navigate(`/journal/${journal.id || index}`)}
+                    onClick={() =>
+                      navigate(`/journal/${journal.id || index}`)
+                    }
                   >
                     <div className="flex justify-between items-center">
                       <div>
                         <h4 className="font-semibold text-gray-800">
-                          {formatMonth(journal.createdAt || journal.periodes[0]?.dateDebut)}
+                          {formatMonth(
+                            journal.createdAt ||
+                              journal.periodes?.[0]?.dateDebut
+                          )}
                         </h4>
                         <p className="text-sm text-gray-500 mt-1">
-                          Dernière modification : {formatDate(journal.updatedAt || journal.createdAt)}
+                          Dernière modification :{' '}
+                          {formatDate(
+                            journal.updatedAt || journal.createdAt
+                          )}
                         </p>
                         <div className="flex items-center space-x-2 mt-2">
                           <span className="text-xs text-gray-600">
@@ -199,23 +220,32 @@ const JournalTab = ({ navigate }) => {
                           </span>
                           <span className="text-xs text-gray-400">•</span>
                           <span className="text-xs text-gray-600">
-                            📝 {journal.periodes?.reduce((sum, p) => sum + (p.missions?.length || 0), 0) || 0} mission(s)
+                            📝{' '}
+                            {journal.periodes?.reduce(
+                              (sum, p) => sum + (p.missions?.length || 0),
+                              0
+                            ) || 0}{' '}
+                            mission(s)
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          journal.status === 'validee' 
-                            ? 'bg-green-100 text-green-800' 
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            journal.status === 'validee'
+                              ? 'bg-green-100 text-green-800'
+                              : journal.status === 'en_attente'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}
+                        >
+                          {journal.status === 'validee'
+                            ? 'Validée'
                             : journal.status === 'en_attente'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {journal.status === 'validee' ? 'Validée' : 
-                           journal.status === 'en_attente' ? 'En attente' : 
-                           'En cours'}
+                            ? 'En attente'
+                            : 'En cours'}
                         </span>
-                        <button 
+                        <button
                           className="text-primary-600 hover:text-primary-700 font-medium text-sm"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -239,7 +269,7 @@ const JournalTab = ({ navigate }) => {
                 <p className="text-gray-600 mb-4">
                   Commencez par créer votre première note de formation
                 </p>
-                <button 
+                <button
                   onClick={() => navigate('/journal/create')}
                   className="inline-flex items-center bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition"
                 >
@@ -254,14 +284,14 @@ const JournalTab = ({ navigate }) => {
   );
 };
 
-
 // Composant Documents
 const DocumentsTab = () => (
   <div className="space-y-6">
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-2xl font-bold text-gray-800 mb-4">📄 Mes Documents</h2>
       <p className="text-gray-600 mb-6">
-        Déposez et consultez vos livrables : fiches de synthèse, rapports, présentations.
+        Déposez et consultez vos livrables : fiches de synthèse, rapports,
+        présentations.
       </p>
 
       {/* Catégories de documents */}
@@ -271,7 +301,7 @@ const DocumentsTab = () => (
           { name: 'Rapports de projet', count: 2, icon: '📊', color: 'green' },
           { name: 'Présentations', count: 5, icon: '📽️', color: 'purple' },
           { name: 'Mémoire final', count: 1, icon: '📘', color: 'red' },
-          { name: 'États d\'avancement', count: 4, icon: '📈', color: 'yellow' },
+          { name: "États d'avancement", count: 4, icon: '📈', color: 'yellow' },
           { name: 'Autres documents', count: 2, icon: '📎', color: 'gray' },
         ].map((category, index) => (
           <div
@@ -279,8 +309,12 @@ const DocumentsTab = () => (
             className="border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 hover:shadow-lg transition cursor-pointer"
           >
             <div className="text-4xl mb-3">{category.icon}</div>
-            <h3 className="font-semibold text-gray-800 mb-1">{category.name}</h3>
-            <p className="text-sm text-gray-500">{category.count} document(s)</p>
+            <h3 className="font-semibold text-gray-800 mb-1">
+              {category.name}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {category.count} document(s)
+            </p>
           </div>
         ))}
       </div>
@@ -308,18 +342,39 @@ const CalendarTab = () => (
 
       {/* Événements à venir */}
       <div className="mt-6">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Événements à venir</h3>
+        <h3 className="text-lg font-semibold text-gray-700 mb-3">
+          Événements à venir
+        </h3>
         <div className="space-y-3">
           {[
-            { title: 'Soutenance Semestre 8', date: '2025-12-15', type: 'Soutenance' },
-            { title: 'Entretien Tuteur', date: '2025-11-25', type: 'Entretien' },
-            { title: 'Dépôt Mémoire Final', date: '2025-12-01', type: 'Échéance' },
+            {
+              title: 'Soutenance Semestre 8',
+              date: '2025-12-15',
+              type: 'Soutenance',
+            },
+            {
+              title: 'Entretien Tuteur',
+              date: '2025-11-25',
+              type: 'Entretien',
+            },
+            {
+              title: 'Dépôt Mémoire Final',
+              date: '2025-12-01',
+              type: 'Échéance',
+            },
           ].map((event, index) => (
-            <div key={index} className="border-l-4 border-primary-600 bg-blue-50 p-4 rounded-r-lg">
+            <div
+              key={index}
+              className="border-l-4 border-primary-600 bg-blue-50 p-4 rounded-r-lg"
+            >
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className="font-semibold text-gray-800">{event.title}</h4>
-                  <p className="text-sm text-gray-600 mt-1">📅 {event.date}</p>
+                  <h4 className="font-semibold text-gray-800">
+                    {event.title}
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    📅 {event.date}
+                  </p>
                 </div>
                 <span className="px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-xs font-medium">
                   {event.type}
@@ -337,9 +392,12 @@ const CalendarTab = () => (
 const EntretiensTab = () => (
   <div className="space-y-6">
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">💬 Entretiens Semestriels</h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">
+        💬 Entretiens Semestriels
+      </h2>
       <p className="text-gray-600 mb-6">
-        Organisez vos entretiens avec votre tuteur pédagogique et maître d'apprentissage.
+        Organisez vos entretiens avec votre tuteur pédagogique et maître
+        d&apos;apprentissage.
       </p>
 
       <button className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium mb-6 transition">
@@ -349,29 +407,49 @@ const EntretiensTab = () => (
       {/* Liste des entretiens */}
       <div className="space-y-4">
         {[
-          { semester: 'Semestre 8', status: 'À planifier', participants: ['Tuteur TP', 'Maître MA'] },
-          { semester: 'Semestre 7', status: 'Effectué', date: '2025-06-20', participants: ['Tuteur TP', 'Maître MA'] },
+          {
+            semester: 'Semestre 8',
+            status: 'À planifier',
+            participants: ['Tuteur TP', 'Maître MA'],
+          },
+          {
+            semester: 'Semestre 7',
+            status: 'Effectué',
+            date: '2025-06-20',
+            participants: ['Tuteur TP', 'Maître MA'],
+          },
         ].map((entretien, index) => (
-          <div key={index} className="border border-gray-200 rounded-lg p-5">
+          <div
+            key={index}
+            className="border border-gray-200 rounded-lg p-5"
+          >
             <div className="flex justify-between items-start mb-3">
               <div>
-                <h4 className="font-semibold text-gray-800">{entretien.semester}</h4>
+                <h4 className="font-semibold text-gray-800">
+                  {entretien.semester}
+                </h4>
                 {entretien.date && (
-                  <p className="text-sm text-gray-500 mt-1">Date: {entretien.date}</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Date: {entretien.date}
+                  </p>
                 )}
               </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                entretien.status === 'Effectué' 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-orange-100 text-orange-800'
-              }`}>
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  entretien.status === 'Effectué'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-orange-100 text-orange-800'
+                }`}
+              >
                 {entretien.status}
               </span>
             </div>
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <span>Participants:</span>
               {entretien.participants.map((p, i) => (
-                <span key={i} className="bg-gray-100 px-2 py-1 rounded">{p}</span>
+                <span key={i} className="bg-gray-100 px-2 py-1 rounded">
+                  {p}
+                </span>
               ))}
             </div>
           </div>
@@ -385,28 +463,54 @@ const EntretiensTab = () => (
 const NotificationsTab = () => (
   <div className="space-y-6">
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">🔔 Notifications</h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-4">
+        🔔 Notifications
+      </h2>
       <p className="text-gray-600 mb-6">
         Consultez vos notifications et ne manquez aucune échéance importante.
       </p>
 
       <div className="space-y-3">
         {[
-          { type: 'warning', title: 'Échéance proche', message: 'Dépôt du rapport de projet dans 5 jours', time: 'Il y a 2h' },
-          { type: 'info', title: 'Nouveau commentaire', message: 'Votre tuteur a commenté votre note mensuelle', time: 'Il y a 1 jour' },
-          { type: 'success', title: 'Document validé', message: 'Votre fiche de synthèse a été validée', time: 'Il y a 2 jours' },
+          {
+            type: 'warning',
+            title: 'Échéance proche',
+            message: 'Dépôt du rapport de projet dans 5 jours',
+            time: 'Il y a 2h',
+          },
+          {
+            type: 'info',
+            title: 'Nouveau commentaire',
+            message: 'Votre tuteur a commenté votre note mensuelle',
+            time: 'Il y a 1 jour',
+          },
+          {
+            type: 'success',
+            title: 'Document validé',
+            message: 'Votre fiche de synthèse a été validée',
+            time: 'Il y a 2 jours',
+          },
         ].map((notif, index) => (
-          <div key={index} className={`border-l-4 p-4 rounded-r-lg ${
-            notif.type === 'warning' ? 'border-yellow-500 bg-yellow-50' :
-            notif.type === 'info' ? 'border-blue-500 bg-blue-50' :
-            'border-green-500 bg-green-50'
-          }`}>
+          <div
+            key={index}
+            className={`border-l-4 p-4 rounded-r-lg ${
+              notif.type === 'warning'
+                ? 'border-yellow-500 bg-yellow-50'
+                : notif.type === 'info'
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-green-500 bg-green-50'
+            }`}
+          >
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <h4 className="font-semibold text-gray-800 mb-1">{notif.title}</h4>
+                <h4 className="font-semibold text-gray-800 mb-1">
+                  {notif.title}
+                </h4>
                 <p className="text-sm text-gray-600">{notif.message}</p>
               </div>
-              <span className="text-xs text-gray-500 whitespace-nowrap ml-4">{notif.time}</span>
+              <span className="text-xs text-gray-500 whitespace-nowrap ml-4">
+                {notif.time}
+              </span>
             </div>
           </div>
         ))}

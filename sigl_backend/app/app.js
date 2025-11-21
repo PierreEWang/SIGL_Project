@@ -7,7 +7,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const cors = require('cors');
-
+const journalRoutes = require('./journal/routes');
 const app = express();
 
 // Environment validation
@@ -138,6 +138,7 @@ app.get('/status', (req, res) => {
 // Routes registration
 app.use('/api/test', testRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/journaux', journalRoutes);
 
 // Apply stricter rate limiting to auth endpoints
 app.use('/api/auth', authLimiter, authRoutes);
