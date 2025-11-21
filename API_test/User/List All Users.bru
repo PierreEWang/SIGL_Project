@@ -1,0 +1,54 @@
+meta {
+  name: List All Users
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}{{apiPath}}/users
+  body: multipartForm
+  auth: inherit
+}
+
+headers {
+  : 
+}
+
+body:multipart-form {
+  accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTFkODFkNjE4ZjQwMWY3YTUwYzcxMjEiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJyb2xlIjoiQVBQUkVOVEkiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzYzNjI1NzkwLCJleHAiOjE3NjM2MjY2OTAsImF1ZCI6Imxtcy11c2VycyIsImlzcyI6ImxlYXJuaW5nLW1hbmFnZW1lbnQtc3lzdGVtIn0.vGG6q-3M2o1-t1tkL2iMJnZH2xha40znLC6wMOcNEUc
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response contains users array", function() {
+    expect(res.getBody()).to.have.property('users');
+    expect(res.getBody().users).to.be.an('array');
+  });
+  
+  test("Response contains count", function() {
+    expect(res.getBody()).to.have.property('count');
+    expect(res.getBody().count).to.be.a('number');
+    expect(res.getBody().count).to.equal(res.getBody().users.length);
+  });
+  
+  test("Users array contains at least one user", function() {
+    expect(res.getBody().users.length).to.be.at.least(1);
+  });
+  
+  test("Each user has required properties", function() {
+    res.getBody().users.forEach(user => {
+      expect(user).to.have.property('_id');
+      expect(user).to.have.property('nom');
+      expect(user).to.have.property('email');
+      expect(user).to.have.property('role');
+      expect(user).to.not.have.property('password');
+    });
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(2000);
+  });
+}

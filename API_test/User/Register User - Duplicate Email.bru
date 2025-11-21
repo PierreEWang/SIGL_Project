@@ -1,0 +1,35 @@
+meta {
+  name: Register User - Duplicate Email
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}{{apiPath}}/users/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "testuser5",
+    "email": "{{testUserEmail}}",
+    "password": "password123",
+    "role": "APPRENTI"
+  }
+}
+
+tests {
+  test("Status code is 409", function() {
+    expect(res.getStatus()).to.equal(409);
+  });
+  
+  test("Response has error message for duplicate email", function() {
+    expect(res.getBody()).to.have.property('error');
+    expect(res.getBody().error).to.equal("Email déjà enregistré");
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}

@@ -1,0 +1,35 @@
+meta {
+  name: Register User - Invalid Role
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}{{apiPath}}/users/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "testuser_invalid",
+    "email": "invalid_role@example.com",
+    "password": "password123",
+    "role": "InvalidRole"
+  }
+}
+
+tests {
+  test("Status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+  
+  test("Response has error message for invalid role", function() {
+    expect(res.getBody()).to.have.property('error');
+    expect(res.getBody().error).to.include("Le rôle doit être l'un des suivants");
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}

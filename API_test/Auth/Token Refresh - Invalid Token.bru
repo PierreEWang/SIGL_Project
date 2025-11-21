@@ -1,0 +1,45 @@
+meta {
+  name: Token Refresh - Invalid Token
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}{{apiPath}}/auth/refresh
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: invalid.jwt.token
+}
+
+tests {
+  test("Status code is 401", function() {
+    expect(res.getStatus()).to.equal(401);
+  });
+  
+  test("Response has success flag false", function() {
+    expect(res.getBody()).to.have.property('success');
+    expect(res.getBody().success).to.equal(false);
+  });
+  
+  test("Response has appropriate error", function() {
+    expect(res.getBody()).to.have.property('error');
+    expect(res.getBody().error).to.equal('INVALID_REFRESH_TOKEN');
+  });
+  
+  test("Response has error message", function() {
+    expect(res.getBody()).to.have.property('message');
+    expect(res.getBody().message).to.include('Invalid or expired refresh token');
+  });
+  
+  test("No tokens in response", function() {
+    expect(res.getBody()).to.not.have.property('data');
+    expect(res.getBody()).to.not.have.property('tokens');
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(2000);
+  });
+}

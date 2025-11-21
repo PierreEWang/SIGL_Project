@@ -1,0 +1,53 @@
+meta {
+  name: Get User Profile - Valid ID
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}{{apiPath}}/users/{{testUserId}}
+  body: none
+  auth: inherit
+}
+
+script:pre-request {
+  // Ensure we have a valid test user ID from registration
+  if (!bru.getEnvVar("testUserId")) {
+    throw new Error("testUserId not set. Run 'Register User - Valid' test first.");
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response contains user data", function() {
+    expect(res.getBody()).to.have.property('user');
+    expect(res.getBody().user).to.have.property('_id');
+    expect(res.getBody().user).to.have.property('nom');
+    expect(res.getBody().user).to.have.property('email');
+    expect(res.getBody().user).to.have.property('role');
+    expect(res.getBody().user).to.not.have.property('password');
+  });
+  
+  test("User ID matches requested ID", function() {
+    expect(res.getBody().user._id).to.equal(bru.getEnvVar("testUserId"));
+  });
+  
+  test("User data is correct", function() {
+    const user = res.getBody().user;
+    expect(user.nom).to.equal('testuser');
+    expect(user.email).to.equal('test@example.com');
+    expect(user.role).to.equal('APPRENTI');
+  });
+  
+  test("Response has timestamps", function() {
+    expect(res.getBody().user).to.have.property('createdAt');
+    expect(res.getBody().user).to.have.property('updatedAt');
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}

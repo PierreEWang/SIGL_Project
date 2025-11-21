@@ -1,0 +1,33 @@
+meta {
+  name: Update User - Invalid ID
+  type: http
+  seq: 11
+}
+
+put {
+  url: {{baseUrl}}{{apiPath}}/users/{{invalidObjectId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "updateduser2",
+    "email": "updated2@example.com"
+  }
+}
+
+tests {
+  test("Status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+  
+  test("Response has error message for invalid ID format", function() {
+    expect(res.getBody()).to.have.property('error');
+    expect(res.getBody().error).to.equal("Format d'ID utilisateur invalide");
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}

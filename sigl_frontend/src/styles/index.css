@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 font-sans antialiased;
+  }
+}
+
+@layer components {
+  .input-field {
+    @apply w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-300 rounded-md px-4 py-3 transition duration-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 hover:border-slate-400 shadow-sm;
+  }
+  
+  .btn-primary {
+    @apply w-full rounded-md bg-primary-600 py-3 px-4 text-center text-sm font-semibold text-white transition-all shadow-md hover:shadow-lg hover:bg-primary-700 focus:bg-primary-700 focus:shadow-none active:bg-primary-800 disabled:pointer-events-none disabled:opacity-50;
+  }
+}

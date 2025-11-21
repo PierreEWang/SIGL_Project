@@ -1,0 +1,76 @@
+meta {
+  name: User Registration - Complete Flow
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}{{apiPath}}/users/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "authtest",
+    "email": "authtest@example.com",
+    "password": "AuthTest123!",
+    "role": "APPRENTI"
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("Response has success message", function() {
+    expect(res.getBody()).to.have.property('message');
+    expect(res.getBody().message).to.include('succès');
+  });
+  
+  test("Response contains user data", function() {
+    expect(res.getBody()).to.have.property('user');
+    const user = res.getBody().user;
+    expect(user).to.have.property('_id');
+    expect(user).to.have.property('nom');
+    expect(user).to.have.property('email');
+    expect(user).to.have.property('role');
+    expect(user).to.not.have.property('password');
+  });
+  
+  test("User data is correct", function() {
+    const user = res.getBody().user;
+    expect(user.nom).to.equal('authtest');
+    expect(user.email).to.equal('authtest@example.com');
+    expect(user.role).to.equal('APPRENTI');
+  });
+  
+  test("Response contains auth record info", function() {
+    expect(res.getBody()).to.have.property('auth');
+    const auth = res.getBody().auth;
+    expect(auth).to.have.property('userId');
+    expect(auth).to.have.property('isActive');
+    expect(auth.isActive).to.equal(true);
+    expect(auth).to.not.have.property('passwordHash');
+    expect(auth).to.not.have.property('refreshToken');
+  });
+  
+  test("User and auth records are linked", function() {
+    const user = res.getBody().user;
+    const auth = res.getBody().auth;
+    expect(auth.userId).to.equal(user._id);
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(3000);
+  });
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    const user = res.getBody().user;
+    bru.setEnvVar("authTestUserId", user._id);
+    bru.setEnvVar("authTestEmail", user.email);
+  }
+}

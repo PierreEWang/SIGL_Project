@@ -1,0 +1,45 @@
+meta {
+  name: Register User - Valid Role
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}{{apiPath}}/users/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "admin_user",
+    "email": "admin@example.com",
+    "password": "adminpass123",
+    "role": "ADMIN"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setEnvVar("adminUserId", res.getBody().user._id);
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("Response has success message", function() {
+    expect(res.getBody()).to.have.property('message');
+    expect(res.getBody().message).to.equal('Utilisateur enregistré avec succès');
+  });
+  
+  test("User has correct role", function() {
+    expect(res.getBody().user.role).to.equal('ADMIN');
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(2000);
+  });
+}

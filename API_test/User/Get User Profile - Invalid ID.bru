@@ -1,0 +1,26 @@
+meta {
+  name: Get User Profile - Invalid ID
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}{{apiPath}}/users/{{invalidObjectId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+  
+  test("Response has error message for invalid ID format", function() {
+    expect(res.getBody()).to.have.property('error');
+    expect(res.getBody().error).to.equal("Format d'ID utilisateur invalide");
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}

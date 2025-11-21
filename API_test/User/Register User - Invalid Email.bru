@@ -1,0 +1,35 @@
+meta {
+  name: Register User - Invalid Email
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}{{apiPath}}/users/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "testuser3",
+    "email": "invalid-email",
+    "password": "password123",
+    "role": "APPRENTI"
+  }
+}
+
+tests {
+  test("Status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+  
+  test("Response has error message for invalid email", function() {
+    expect(res.getBody()).to.have.property('error');
+    expect(res.getBody().error).to.equal("Format d'email invalide");
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}

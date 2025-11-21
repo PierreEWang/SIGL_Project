@@ -1,0 +1,60 @@
+meta {
+  name: Token Refresh - Valid
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}{{apiPath}}/auth/refresh
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{refreshToken}}
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response has success flag", function() {
+    expect(res.getBody()).to.have.property('success');
+    expect(res.getBody().success).to.equal(true);
+  });
+  
+  test("Response contains new tokens", function() {
+    expect(res.getBody()).to.have.property('data');
+    const data = res.getBody().data;
+    expect(data).to.have.property('accessToken');
+    expect(data).to.have.property('refreshToken');
+    expect(data).to.have.property('tokenType');
+    expect(data).to.have.property('expiresIn');
+    expect(data.tokenType).to.equal('Bearer');
+  });
+  
+  test("New access token is different from old one", function() {
+    const newAccessToken = res.getBody().data.accessToken;
+    const oldAccessToken = bru.getEnvVar("accessToken");
+    expect(newAccessToken).to.not.equal(oldAccessToken);
+  });
+  
+  test("Tokens are valid JWT format", function() {
+    const data = res.getBody().data;
+    expect(data.accessToken.split('.').length).to.equal(3);
+    expect(data.refreshToken.split('.').length).to.equal(3);
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(2000);
+  });
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const data = res.getBody().data;
+    bru.setEnvVar("accessToken", data.accessToken);
+    bru.setEnvVar("refreshToken", data.refreshToken);
+  }
+}

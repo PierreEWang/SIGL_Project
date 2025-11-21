@@ -1,0 +1,48 @@
+meta {
+  name: Logout - Valid
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}{{apiPath}}/auth/logout
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response has success flag", function() {
+    expect(res.getBody()).to.have.property('success');
+    expect(res.getBody().success).to.equal(true);
+  });
+  
+  test("Response has logout message", function() {
+    expect(res.getBody()).to.have.property('message');
+    expect(res.getBody().message).to.equal('Logout successful');
+  });
+  
+  test("No sensitive data in response", function() {
+    expect(res.getBody()).to.not.have.property('data');
+    expect(res.getBody()).to.not.have.property('tokens');
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(2000);
+  });
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    // Clear tokens after successful logout
+    bru.setEnvVar("accessToken", "");
+    bru.setEnvVar("refreshToken", "");
+  }
+}

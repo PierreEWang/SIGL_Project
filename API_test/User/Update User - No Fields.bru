@@ -1,0 +1,30 @@
+meta {
+  name: Update User - No Fields
+  type: http
+  seq: 17
+}
+
+put {
+  url: {{baseUrl}}{{apiPath}}/users/{{validObjectId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("Status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+  
+  test("Response has error message for no fields", function() {
+    expect(res.getBody()).to.have.property('error');
+    expect(res.getBody().error).to.equal("Aucun champ valide fourni pour la mise à jour");
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}

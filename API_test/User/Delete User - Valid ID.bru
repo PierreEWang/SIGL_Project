@@ -1,0 +1,40 @@
+meta {
+  name: Delete User - Valid ID
+  type: http
+  seq: 12
+}
+
+delete {
+  url: {{baseUrl}}{{apiPath}}/users/{{testUserId}}
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // Ensure we have a valid test user ID from registration
+  if (!bru.getEnvVar("testUserId")) {
+    throw new Error("testUserId not set. Run 'Register User - Valid' test first.");
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response has success message", function() {
+    expect(res.getBody()).to.have.property('message');
+    expect(res.getBody().message).to.equal('Compte utilisateur supprimé avec succès');
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}
+
+script:post-response {
+  // Clear the testUserId since user is deleted
+  if (res.getStatus() === 200) {
+    bru.setEnvVar("testUserId", "");
+  }
+}

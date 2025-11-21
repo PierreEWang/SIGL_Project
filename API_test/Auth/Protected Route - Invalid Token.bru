@@ -1,0 +1,45 @@
+meta {
+  name: Protected Route - Invalid Token
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}{{apiPath}}/users/{{loggedInUserId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: invalid.jwt.token
+}
+
+tests {
+  test("Status code is 401", function() {
+    expect(res.getStatus()).to.equal(401);
+  });
+  
+  test("Response has success flag false", function() {
+    expect(res.getBody()).to.have.property('success');
+    expect(res.getBody().success).to.equal(false);
+  });
+  
+  test("Response has token error", function() {
+    expect(res.getBody()).to.have.property('error');
+    expect(['INVALID_TOKEN', 'TOKEN_VERIFICATION_FAILED']).to.include(res.getBody().error);
+  });
+  
+  test("Response has appropriate message", function() {
+    expect(res.getBody()).to.have.property('message');
+    expect(res.getBody().message).to.include('token');
+  });
+  
+  test("No sensitive data in response", function() {
+    expect(res.getBody()).to.not.have.property('data');
+    expect(res.getBody()).to.not.have.property('user');
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(2000);
+  });
+}

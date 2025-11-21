@@ -1,0 +1,71 @@
+meta {
+  name: Login - Valid Admin
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}{{apiPath}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "admin@admin.fr",
+    "password": "goodlife"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const data = res.getBody().data;
+    bru.setEnvVar("accessToken", data.tokens.accessToken);
+    bru.setEnvVar("refreshToken", data.tokens.refreshToken);
+    bru.setEnvVar("loggedInUserId", data.user.id);
+    bru.setEnvVar("userRole", data.user.role);
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response has success flag", function() {
+    expect(res.getBody()).to.have.property('success');
+    expect(res.getBody().success).to.equal(true);
+  });
+  
+  test("Response contains user data", function() {
+    expect(res.getBody()).to.have.property('data');
+    expect(res.getBody().data).to.have.property('user');
+    const user = res.getBody().data.user;
+    expect(user).to.have.property('id');
+    expect(user).to.have.property('nom');
+    expect(user).to.have.property('email');
+    expect(user).to.have.property('role');
+    expect(user).to.not.have.property('password');
+  });
+  
+  test("Response contains tokens", function() {
+    expect(res.getBody().data).to.have.property('tokens');
+    const tokens = res.getBody().data.tokens;
+    expect(tokens).to.have.property('accessToken');
+    expect(tokens).to.have.property('refreshToken');
+    expect(tokens).to.have.property('tokenType');
+    expect(tokens).to.have.property('expiresIn');
+    expect(tokens.tokenType).to.equal('Bearer');
+  });
+  
+  test("Tokens are valid JWT format", function() {
+    const tokens = res.getBody().data.tokens;
+    // JWT tokens should have 3 parts separated by dots
+    expect(tokens.accessToken.split('.').length).to.equal(3);
+    expect(tokens.refreshToken.split('.').length).to.equal(3);
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(2000);
+  });
+}

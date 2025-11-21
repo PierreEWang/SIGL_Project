@@ -1,0 +1,26 @@
+meta {
+  name: Get User Profile - Not Found
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}{{apiPath}}/users/{{validObjectId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 404", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+  
+  test("Response has error message for user not found", function() {
+    expect(res.getBody()).to.have.property('error');
+    expect(res.getBody().error).to.equal("Utilisateur non trouvé");
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}

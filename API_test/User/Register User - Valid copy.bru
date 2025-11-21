@@ -1,0 +1,57 @@
+meta {
+  name: Register User - Valid copy
+  type: http
+  seq: 18
+}
+
+post {
+  url: http://pierre.wang:3000/api/users/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "{{testUsername}}",
+    "email": "{{testUserEmail}}",
+    "password": "{{testPassword}}",
+    "role": "APPRENTI"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setEnvVar("testUserId", res.getBody().user._id);
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("Response has success message", function() {
+    expect(res.getBody()).to.have.property('message');
+    expect(res.getBody().message).to.equal('Utilisateur enregistré avec succès');
+  });
+  
+  test("Response contains user data", function() {
+    expect(res.getBody()).to.have.property('user');
+    expect(res.getBody().user).to.have.property('_id');
+    expect(res.getBody().user).to.have.property('nom');
+    expect(res.getBody().user).to.have.property('email');
+    expect(res.getBody().user).to.have.property('role');
+    expect(res.getBody().user).to.not.have.property('password');
+  });
+  
+  test("User data is correct", function() {
+    const user = res.getBody().user;
+    expect(user.nom).to.equal('testuser');
+    expect(user.email).to.equal('test@example.com');
+    expect(user.role).to.equal('APPRENTI');
+  });
+  
+  test("Response time is acceptable", function() {
+    expect(res.getResponseTime()).to.be.below(2000);
+  });
+}
