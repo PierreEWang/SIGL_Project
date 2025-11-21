@@ -122,6 +122,15 @@ const authService = {
     }
   },
 
+  // Demande de changement de rôle
+  requestRoleChange: async (userId, requestedRole, reason) => {
+    const response = await api.post(`/users/${userId}/role-request`, {
+      requestedRole,
+      reason,
+    });
+    return response.data; // { success, message, request }
+},
+
   // Mettre à jour le profil
   updateProfile: async (userId, userData) => {
     try {
