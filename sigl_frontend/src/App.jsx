@@ -4,29 +4,35 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import RegisterPage from './pages/RegisterPage';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
+
 import CreateJournalPage from './pages/journal/CreateJournalPage';
 import JournalDetailPage from './pages/journal/JournalDetailPage';
-import ProfilePage from './pages/profile/ProfilePage';
+
+import ProfilePage from './pages/profile/ProfilePage'; // ta page profil (branche KC)
+import CalendarPage from './pages/calendar/CalendarPage'; // branche calendrier
+import EventDetailPage from './pages/calendar/EventDetailPage'; // branche calendrier
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Pages publiques */}
+        {/* Public */}
         <Route path="/" element={<HomePage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Dashboard étudiant */}
+        {/* Espace apprenti */}
         <Route path="/dashboard" element={<StudentDashboard />} />
-
-        {/* Journal de formation */}
         <Route path="/journal/create" element={<CreateJournalPage />} />
         <Route path="/journal/:id" element={<JournalDetailPage />} />
 
         {/* Profil utilisateur */}
-        <Route path="/profile" element={<ProfilePage />} />  {/* ⬅️ ajout */}
+        <Route path="/profile" element={<ProfilePage />} />
 
-        {/* Redirection par défaut */}
+        {/* Calendrier global */}
+        <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/calendar/event/:id" element={<EventDetailPage />} />
+
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

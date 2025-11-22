@@ -107,7 +107,7 @@ const StudentDashboard = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'journal' && <JournalTab navigate={navigate} />}
         {activeTab === 'documents' && <DocumentsTab />}
-        {activeTab === 'calendar' && <CalendarTab />}
+        {activeTab === 'calendar' && <CalendarTab navigate={navigate} />}
         {activeTab === 'entretiens' && <EntretiensTab />}
         {activeTab === 'notifications' && <NotificationsTab />}
       </main>
@@ -289,14 +289,126 @@ const DocumentsTab = () => (
   </div>
 );
 
-const CalendarTab = () => (
-  <div>
-    <h2 className="text-xl font-semibold text-gray-900 mb-4">Calendrier</h2>
-    <p className="text-gray-600 text-sm">
-      À implémenter : vue calendrier avec échéances, entretiens, soutenances…
-    </p>
-  </div>
-);
+const CalendarTab = ({ navigate }) => {
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Chargement des événements à venir
+  useEffect(() => {
+    const loadUpcomingEvents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch('http://localhost:3000/api/calendar/events');
+        const data = await response.json();
+
+        if (data.success) {
+          const now = new Date();
+          const futureEvents = data.data
+            .filter(event => new Date(event.date) >= now)
+            .slice(0, 5);
+          setUpcomingEvents(futureEvents);
+        } else {
+          setError('Erreur lors du chargement des événements');
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des événements:', err);
+        setError('Impossible de charger les événements');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUpcomingEvents();
+  }, []);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  };
+
+  const getEventType = (category) => {
+    const types = {
+      'réunion': 'Réunion',
+      'rendez-vous': 'Rendez-vous',
+      'culturel': 'Culturel',
+      'formation': 'Formation'
+    };
+    return types[category] || 'Événement';
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">📅 Calendrier</h2>
+        <p className="text-gray-600 mb-6">
+          Consultez vos événements, soutenances et dates importantes.
+        </p>
+
+        {/* Bouton pour accéder au calendrier complet */}
+        <button
+          onClick={() => navigate('/calendar')}
+          className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium mb-6 transition"
+        >
+          📅 Ouvrir le calendrier complet
+        </button>
+
+        {/* Événements à venir */}
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">
+            Événements à venir
+          </h3>
+
+          {loading ? (
+            <p className="text-sm text-gray-500">Chargement des événements…</p>
+          ) : error ? (
+            <p className="text-sm text-red-600">{error}</p>
+          ) : upcomingEvents.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              Aucun événement à venir pour le moment.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {upcomingEvents.map(event => (
+                <li
+                  key={event.id}
+                  className="flex items-start justify-between border border-gray-200 rounded-lg p-3 hover:bg-gray-50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">
+                      {event.title}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatDate(event.date)} • {event.time} •{' '}
+                      {getEventType(event.category)}
+                    </p>
+                    {event.location && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        {event.location}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => navigate(`/calendar/event/${event.id}`)}
+                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    Détails →
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const EntretiensTab = () => (
   <div>
