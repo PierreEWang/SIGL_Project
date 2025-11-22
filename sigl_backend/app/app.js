@@ -21,7 +21,7 @@ const requiredEnvVars = [
 
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 if (missingEnvVars.length > 0) {
-    console.error('❌ Missing required environment variables:', missingEnvVars.join(', '));
+    console.error('Missing required environment variables:', missingEnvVars.join(', '));
     process.exit(1);
 }
 
@@ -34,10 +34,10 @@ console.log(`🔌 Port: ${process.env.PORT || 3000}`);
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/database';
 mongoose.connect(mongoUri)
     .then(() => {
-        console.log('✅ MongoDB connection successful');
+        console.log('MongoDB connection successful');
     })
     .catch((error) => {
-        console.error('❌ MongoDB connection error:', error.message);
+        console.error('MongoDB connection error:', error.message);
         process.exit(1);
     });
 
@@ -218,19 +218,19 @@ const gracefulShutdown = (signal) => {
     
     // Close MongoDB connection
     mongoose.connection.close(() => {
-        console.log('📦 MongoDB connection closed');
+        console.log('MongoDB connection closed');
     });
     
     // Close server
     server.close(() => {
-        console.log('🔌 HTTP server closed');
-        console.log('✅ Graceful shutdown completed');
+        console.log('HTTP server closed');
+        console.log('Graceful shutdown completed');
         process.exit(0);
     });
     
     // Force close after 10 seconds
     setTimeout(() => {
-        console.error('⚠️  Forced shutdown after timeout');
+        console.error('Forced shutdown after timeout');
         process.exit(1);
     }, 10000);
 };
@@ -238,11 +238,11 @@ const gracefulShutdown = (signal) => {
 // Start server
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-    console.log(`🔒 Security middleware active`);
-    console.log(`📊 Rate limiting configured`);
-    console.log('✅ Application startup complete');
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
+    console.log(`Security middleware active`);
+    console.log(`Rate limiting configured`);
+    console.log('Application startup complete');
 });
 
 // Register shutdown handlers
@@ -251,13 +251,13 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-    console.error('💥 Uncaught Exception:', error);
+    console.error('Uncaught Exception:', error);
     gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
     gracefulShutdown('UNHANDLED_REJECTION');
 });
 
