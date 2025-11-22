@@ -9,6 +9,7 @@ const morgan = require('morgan');
 const cors = require('cors');
 const journalRoutes = require('./journal/routes');
 const app = express();
+const calendarRoutes = require('./calendar/routes');
 
 // Environment validation
 const requiredEnvVars = [
@@ -139,6 +140,7 @@ app.get('/status', (req, res) => {
 app.use('/api/test', testRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/journaux', journalRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // Apply stricter rate limiting to auth endpoints
 app.use('/api/auth', authLimiter, authRoutes);
