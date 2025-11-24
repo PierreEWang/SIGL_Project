@@ -16,13 +16,11 @@ const JournalDetailPage = () => {
         setIsLoading(true);
         setError(null);
 
-        // On réutilise la route GET /api/journaux
         const journaux = await journalService.getMyJournaux();
 
         const found =
-          journaux.find((j) => j.id === id) ||
-          journaux[parseInt(id, 10)] || // fallback si jamais l'id était un index
-          null;
+          journaux.find((j) => String(j.id) === String(id)) ||
+          journaux[parseInt(id, 10)];
 
         if (!found) {
           setError('Journal introuvable.');
@@ -31,7 +29,7 @@ const JournalDetailPage = () => {
         }
       } catch (err) {
         console.error(err);
-        setError('Erreur lors du chargement du journal.');
+        setError("Erreur lors du chargement du journal.");
       } finally {
         setIsLoading(false);
       }
@@ -40,112 +38,114 @@ const JournalDetailPage = () => {
     fetchJournal();
   }, [id]);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return dateString;
-    return date.toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-  };
-
   if (isLoading) {
+    return <p className="p-4 text-gray-600">Chargement du journal...</p>;
+  }
+
+  if (error) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <p className="text-gray-600">Chargement du journal...</p>
+      <div className="p-4">
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard?tab=journal')}
+          className="inline-flex items-center text-sm text-primary-600 hover:text-primary-800 mb-4"
+        >
+          ← Retour au tableau de bord
+        </button>
+        <p className="text-red-600 text-sm">{error}</p>
       </div>
     );
   }
 
-  if (error || !journal) {
-    return (
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-4">
-        <p className="text-red-600 text-sm">{error || 'Journal introuvable.'}</p>
-        <button
-          onClick={() => navigate('/dashboard?tab=journal')}
-          className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-primary-600 text-white hover:bg-primary-700"
-        >
-          ← Retour au journal de formation
-        </button>
-      </div>
-    );
+  if (!journal) {
+    return null;
   }
+
+  const periodes = journal.periodes || [];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900 mb-1">
-            Détail de la note mensuelle
-          </h1>
-          <p className="text-sm text-gray-500">
-            Créée le {formatDate(journal.createdAt)}
-          </p>
-        </div>
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="mb-4">
         <button
+          type="button"
           onClick={() => navigate('/dashboard?tab=journal')}
-          className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+          className="inline-flex items-center text-sm text-primary-600 hover:text-primary-800"
         >
-          ← Retour au journal
+          ← Retour au tableau de bord
         </button>
       </div>
 
-      {journal.periodes?.length ? (
-        <div className="space-y-6">
-          {journal.periodes.map((periode, pIndex) => (
-            <div
-              key={periode.id || pIndex}
-              className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 space-y-4"
-            >
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Période {pIndex + 1}{' '}
-                  {periode.titre ? `- ${periode.titre}` : ''}
-                </h2>
-                <span className="text-xs text-gray-500">
-                  {periode.dateDebut && periode.dateFin
-                    ? `${periode.dateDebut} → ${periode.dateFin}`
-                    : ''}
-                </span>
-              </div>
+      <h1 className="text-2xl font-semibold mb-4">
+        Détail du journal de formation
+      </h1>
 
-              {periode.missions?.length ? (
-                <div className="space-y-3">
-                  {periode.missions.map((mission, mIndex) => (
-                    <div
-                      key={mission.id || mIndex}
-                      className="border border-gray-200 rounded-md p-4 bg-gray-50 space-y-2"
-                    >
-                      <h3 className="text-sm font-semibold text-gray-800">
-                        Mission {mIndex + 1}{' '}
-                        {mission.titre ? `- ${mission.titre}` : ''}
-                      </h3>
-                      {mission.competences && (
-                        <p className="text-xs text-gray-600">
-                          <span className="font-medium">Compétences : </span>
-                          {mission.competences}
-                        </p>
-                      )}
-                      {mission.description && (
-                        <p className="text-sm text-gray-700 whitespace-pre-line">
-                          {mission.description}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  Aucune mission renseignée pour cette période.
+      {periodes.map((p, idx) => (
+        <div
+          key={idx}
+          className="bg-white border border-gray-200 rounded-lg p-4 mb-4"
+        >
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-semibold text-gray-800">
+              Période {idx + 1} {p.titre ? `– ${p.titre}` : ''}
+            </h2>
+            <span className="text-xs text-gray-500">
+              {p.dateDebut && p.dateFin
+                ? `${p.dateDebut} → ${p.dateFin}`
+                : 'Dates non renseignées'}
+            </span>
+          </div>
+
+          {(p.missions || []).map((m, mIndex) => (
+            <div
+              key={mIndex}
+              className="border border-gray-100 rounded-md p-3 mb-3"
+            >
+              <h3 className="text-sm font-semibold text-gray-700 mb-1">
+                {m.titre || `Mission ${mIndex + 1}`}
+              </h3>
+              {m.competences && (
+                <p className="text-xs text-gray-500 mb-1">
+                  Compétences : {m.competences}
+                </p>
+              )}
+              {m.description && (
+                <p className="text-sm text-gray-700 whitespace-pre-line">
+                  {m.description}
                 </p>
               )}
             </div>
           ))}
         </div>
-      ) : (
-        <p className="text-sm text-gray-500">Aucune période renseignée.</p>
+      ))}
+
+      {journal.calendarEvent && (
+        <div className="mt-6 bg-primary-50 border border-primary-200 rounded-lg p-4">
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">
+            Événement de calendrier lié
+          </h2>
+          <p className="text-sm text-gray-800">
+            <strong>{journal.calendarEvent.title}</strong>
+          </p>
+          <p className="text-sm text-gray-600">
+            {journal.calendarEvent.date}
+            {journal.calendarEvent.time ? ` à ${journal.calendarEvent.time}` : ''}
+          </p>
+          {journal.calendarEvent.location && (
+            <p className="text-sm text-gray-600">
+              Lieu : {journal.calendarEvent.location}
+            </p>
+          )}
+          {journal.calendarEvent.participantsRaw && (
+            <p className="text-sm text-gray-600">
+              Participants : {journal.calendarEvent.participantsRaw}
+            </p>
+          )}
+          {journal.calendarEvent.notes && (
+            <p className="text-sm text-gray-700 mt-2 whitespace-pre-line">
+              {journal.calendarEvent.notes}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
