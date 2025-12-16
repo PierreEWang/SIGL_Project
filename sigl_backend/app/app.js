@@ -7,12 +7,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const cors = require('cors');
-const journalRoutes = require('./journal/routes');
+
 const app = express();
-const calendarRoutes = require('./calendar/routes');
-const testRoutes = require('./test/routes');
-const userRoutes = require('./user/routes');
-const authRoutes = require('./auth/auth.routes');
 
 // Environment validation
 const requiredEnvVars = [
@@ -64,26 +60,12 @@ app.use(helmet({
 }));
 
 // CORS Configuration
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
-  'http://localhost:5173',
-  'http://localhost:4173', // (si tu build/testes en preview Vite)
-];
-
 app.use(cors({
-  origin: function (origin, callback) {
-    // autoriser aussi les requêtes sans origin (ex: curl, Postman)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`CORS: origine non autorisée -> ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['X-Total-Count'],
+    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['X-Total-Count']
 }));
 
 // Body parsing middleware with size limits
@@ -137,6 +119,14 @@ if (process.env.NODE_ENV === 'development') {
     app.use(morgan('combined'));
 }
 
+// Import routes
+const testRoutes = require('./test/routes');
+const userRoutes = require('./user/routes');
+const authRoutes = require('./auth/auth.routes');
+const calendarRoutes = require('./calendar/routes');
+const entretienRoutes = require('./entretien/entretien.routes');
+const soutenanceRoutes = require('./soutenance/soutenance.routes');
+
 // Health check route
 app.get('/status', (req, res) => {
     res.json({
@@ -152,7 +142,8 @@ app.get('/status', (req, res) => {
 app.use('/api/test', testRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/calendar', calendarRoutes);
-app.use('/api/journaux', journalRoutes)
+app.use('/api/entretiens', entretienRoutes);
+app.use('/api/soutenances', soutenanceRoutes);
 
 // Apply stricter rate limiting to auth endpoints
 app.use('/api/auth', authLimiter, authRoutes);
