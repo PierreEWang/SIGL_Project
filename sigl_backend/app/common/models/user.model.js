@@ -1,98 +1,134 @@
+// sigl_backend/app/common/models/user.model.js
 const mongoose = require('mongoose');
 
-const utilisateurSchema = new mongoose.Schema({
+const VALID_ROLES = ['APPRENTI', 'MA', 'TP', 'CA', 'RC', 'PROF', 'ADMIN'];
+
+const utilisateurSchema = new mongoose.Schema(
+  {
     nom: {
-        type: String,
-        required: true,
-        trim: true
+      type: String,
+      required: true,
+      trim: true,
     },
+
     email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true,
-        match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Format d\'email invalide']
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Format d'email invalide"],
     },
-    // Email verification status for email verification flow
+
+    // Nouveau : prénom / nom de famille décomposés
+    firstName: {
+      type: String,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      trim: true,
+    },
+
+    // Avatar (data URL ou URL)
+    avatar: {
+      type: String,
+      default: null,
+    },
+
+    // MFA
+    mfaEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    mfaMethod: {
+      type: String,
+      enum: ['sms', 'email', null],
+      default: null,
+    },
+    mfaCode: {
+      type: String,
+      default: null,
+    },
+    mfaCodeExpiresAt: {
+      type: Date,
+      default: null,
+    },
+    phone: {
+      type: String,
+      sparse: true,
+    },
+
+    // Email vérifié
     isEmailVerified: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false,
     },
-    // Password field removed - stored separately in auth_credentials collection
-    // Role system uses standardized English codes only (French roles no longer supported)
+
+    // Rôle métier
     role: {
-        type: String,
-        required: true,
-        enum: [
-            'APPRENTI',    // Apprentice/Student - Basic user access
-            'MA',          // Maître d'Apprentissage (Mentor) - Mentor-level access
-            'TP',          // Tuteur Pédagogique (Educational Tutor) - Educational oversight
-            'CA',          // Chargé d'Affaires (Account Manager) - Business management
-            'RC',          // Responsable de Centre (Center Manager) - Center administration
-            'PROF',        // Professor/Instructor - Teaching and content management
-            'ADMIN'        // System Administrator - Full system access
-        ],
-        default: 'APPRENTI'
+      type: String,
+      required: true,
+      enum: VALID_ROLES,
+      default: 'APPRENTI',
     },
-    // Role-specific fields (optional, based on user role)
-    // For APPRENTI (Apprentice/Student)
+
+    // Champs spécifiques / legacy
     idApprenti: {
-        type: mongoose.Schema.Types.ObjectId,
-        sparse: true
+      type: mongoose.Schema.Types.ObjectId,
+      sparse: true,
     },
     numero: {
-        type: String,
-        sparse: true
+      type: String,
+      sparse: true,
     },
-    // For MA (Maître d'Apprentissage/Mentor)
+    promotion: {
+      type: mongoose.Schema.Types.ObjectId,
+      sparse: true,
+    },
+    entreprise: {
+      type: mongoose.Schema.Types.ObjectId,
+      sparse: true,
+    },
     fonction: {
-        type: String,
-        sparse: true
+      type: String,
+      sparse: true,
     },
-    // For TP (Tuteur Pédagogique/Educational Tutor)
     specialite: {
-        type: String,
-        sparse: true
+      type: String,
+      sparse: true,
     },
-    // For CA (Chargé d'Affaires/Account Manager)
     service: {
-        type: String,
-        sparse: true
+      type: String,
+      sparse: true,
     },
-    // For RC (Responsable de Centre/Center Manager)
     departement: {
-        type: String,
-        sparse: true
+      type: String,
+      sparse: true,
     },
-    // For PROF (Professor/Instructor)
     grade: {
-        type: String,
-        sparse: true
+      type: String,
+      sparse: true,
     },
-    // For ADMIN (System Administrator)
     habilitations: {
-        type: String,
-        sparse: true
-    }
-}, {
-    timestamps: true, // Ajoute automatiquement createdAt et updatedAt
-    collection: 'utilisateurs'
-});
+      type: String,
+      sparse: true,
+    },
+  },
+  {
+    timestamps: true,
+    collection: 'utilisateurs',
+  }
+);
 
-// Index pour de meilleures performances de requête
-// Note: email index is already created by unique: true constraint
 utilisateurSchema.index({ role: 1 });
 
-// Method to remove sensitive data before sending response
-// Note: Passwords are stored in separate auth_credentials collection for security
-utilisateurSchema.methods.toJSON = function() {
-    const user = this.toObject();
-    // Password field no longer exists in this model (stored separately for security)
-    delete user.password;
-    return user;
+// Retirer les champs sensibles / inutiles côté front
+utilisateurSchema.methods.toSafeObject = function () {
+  const obj = this.toObject();
+  delete obj.mfaCode;
+  delete obj.mfaCodeExpiresAt;
+  return obj;
 };
 
-const Utilisateur = mongoose.model('Utilisateur', utilisateurSchema);
-
-module.exports = Utilisateur;
+module.exports = mongoose.model('Utilisateur', utilisateurSchema);

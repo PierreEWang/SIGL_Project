@@ -1,1 +1,80 @@
-{"options":{"validator":{"$jsonSchema":{"bsonType":"object","required":["nom","email","role"],"properties":{"nom":{"bsonType":"string","minLength":{"$numberInt":"2"}},"email":{"bsonType":"string","pattern":"^.+@.+\\..+$"},"role":{"enum":["APPRENTI","MA","TP","CA","RC","PROF","ADMIN"]},"numero":{"bsonType":["string","null"]},"promotion":{"bsonType":["objectId","null"]},"entreprise":{"bsonType":["objectId","null"]},"grade":{"bsonType":["string","null"]},"departement":{"bsonType":["string","null"]},"service":{"bsonType":["string","null"]},"specialite":{"bsonType":["string","null"]},"fonction":{"bsonType":["string","null"]}},"additionalProperties":false}},"validationLevel":"moderate","validationAction":"error"},"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"email":{"$numberInt":"1"}},"name":"email_1","unique":true},{"v":{"$numberInt":"2"},"key":{"role":{"$numberInt":"1"}},"name":"role_1"}],"uuid":"2279db17d9b64097aedeb1a410814a6b","collectionName":"utilisateurs","type":"collection"}
+{
+  "options": {
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["nom", "email", "role"],
+        "properties": {
+          "_id": { "bsonType": "objectId" },
+
+          "nom": {
+            "bsonType": "string",
+            "minLength": { "$numberInt": "2" }
+          },
+          "email": {
+            "bsonType": "string",
+            "pattern": "^.+@.+\\.+$"
+          },
+
+          "role": {
+            "enum": ["APPRENTI", "MA", "TP", "CA", "RC", "PROF", "ADMIN"]
+          },
+
+          
+          "firstName": { "bsonType": ["string", "null"] },
+          "lastName": { "bsonType": ["string", "null"] },
+          "avatar": { "bsonType": ["string", "null"] },
+
+          
+          "mfaEnabled": { "bsonType": ["bool", "null"] },
+          "mfaMethod": { "bsonType": ["string", "null"] },
+          "mfaCode": { "bsonType": ["string", "null"] },
+          "mfaCodeExpiresAt": { "bsonType": ["date", "null"] },
+          "phone": { "bsonType": ["string", "null"] },
+          "isEmailVerified": { "bsonType": ["bool", "null"] },
+
+          
+          "idApprenti": { "bsonType": ["objectId", "null"] },
+          "numero": { "bsonType": ["string", "null"] },
+          "promotion": { "bsonType": ["objectId", "null"] },
+          "entreprise": { "bsonType": ["objectId", "null"] },
+
+          "fonction": { "bsonType": ["string", "null"] },
+          "specialite": { "bsonType": ["string", "null"] },
+          "service": { "bsonType": ["string", "null"] },
+          "departement": { "bsonType": ["string", "null"] },
+          "grade": { "bsonType": ["string", "null"] },
+          "habilitations": { "bsonType": ["string", "null"] },
+
+          
+          "createdAt": { "bsonType": ["date", "null"] },
+          "updatedAt": { "bsonType": ["date", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "validationLevel": "moderate",
+    "validationAction": "error"
+  },
+  "indexes": [
+    {
+      "v": { "$numberInt": "2" },
+      "key": { "_id": { "$numberInt": "1" } },
+      "name": "_id_"
+    },
+    {
+      "v": { "$numberInt": "2" },
+      "key": { "email": { "$numberInt": "1" } },
+      "name": "email_1",
+      "unique": true
+    },
+    {
+      "v": { "$numberInt": "2" },
+      "key": { "role": { "$numberInt": "1" } },
+      "name": "role_1"
+    }
+  ],
+  "uuid": "2279db17d9b64097aedeb1a410814a6b",
+  "collectionName": "utilisateurs",
+  "type": "collection"
+}

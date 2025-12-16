@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import authService from '../../services/authService';
+import { useNavigate, Link } from 'react-router-dom';
+import journalService from '../../services/journalService';
 
 const CreateJournalPage = () => {
   const navigate = useNavigate();
-  const currentUser = authService.getCurrentUser();
 
+  // ---------- STATE JOURNAL ----------
   const [periodes, setPeriodes] = useState([
     {
       id: 1,
+      titre: '',
       dateDebut: '',
       dateFin: '',
       missions: [
@@ -16,451 +17,553 @@ const CreateJournalPage = () => {
           id: 1,
           titre: '',
           description: '',
-          competences: []
-        }
-      ]
-    }
+          competences: '',
+        },
+      ],
+    },
   ]);
 
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  // ---------- STATE ÉVÉNEMENT CALENDRIER (Option A) ----------
+  const [calendarEvent, setCalendarEvent] = useState({
+    enable: false,
+    title: '',
+    date: '',
+    time: '',
+    location: '',
+    participants: '',
+    notes: '',
+  });
 
-  const competencesList = [
-    'Produire',
-    'Valider',
-    'S\'adapter',
-    'Communiquer',
-    'Diagnostiquer',
-    'Concevoir',
-    'Piloter'
-  ];
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Ajouter une nouvelle période
-  const handleAddPeriode = () => {
-    const newPeriode = {
-      id: periodes.length + 1,
-      dateDebut: '',
-      dateFin: '',
-      missions: [
-        {
-          id: 1,
-          titre: '',
-          description: '',
-          competences: []
-        }
-      ]
-    };
-    setPeriodes([...periodes, newPeriode]);
+  // ---------- HELPERS JOURNAL ----------
+
+  const handlePeriodeChange = (periodeIndex, field, value) => {
+    setPeriodes((prev) =>
+      prev.map((p, index) =>
+        index === periodeIndex ? { ...p, [field]: value } : p
+      )
+    );
   };
 
-  // Supprimer une période
-  const handleRemovePeriode = (periodeId) => {
-    if (periodes.length > 1) {
-      setPeriodes(periodes.filter(p => p.id !== periodeId));
+  const handleMissionChange = (
+    periodeIndex,
+    missionIndex,
+    field,
+    value
+  ) => {
+    setPeriodes((prev) =>
+      prev.map((p, pIndex) => {
+        if (pIndex !== periodeIndex) return p;
+        return {
+          ...p,
+          missions: p.missions.map((m, mIndex) =>
+            mIndex === missionIndex ? { ...m, [field]: value } : m
+          ),
+        };
+      })
+    );
+  };
+
+  const addPeriode = () => {
+    setPeriodes((prev) => [
+      ...prev,
+      {
+        id: prev.length + 1,
+        titre: '',
+        dateDebut: '',
+        dateFin: '',
+        missions: [
+          {
+            id: 1,
+            titre: '',
+            description: '',
+            competences: '',
+          },
+        ],
+      },
+    ]);
+  };
+
+  const removePeriode = (periodeIndex) => {
+    setPeriodes((prev) => {
+      if (prev.length === 1) return prev; // on garde au moins une période
+      return prev.filter((_, index) => index !== periodeIndex);
+    });
+  };
+
+  const addMission = (periodeIndex) => {
+    setPeriodes((prev) =>
+      prev.map((p, index) => {
+        if (index !== periodeIndex) return p;
+        return {
+          ...p,
+          missions: [
+            ...p.missions,
+            {
+              id: p.missions.length + 1,
+              titre: '',
+              description: '',
+              competences: '',
+            },
+          ],
+        };
+      })
+    );
+  };
+
+  const removeMission = (periodeIndex, missionIndex) => {
+    setPeriodes((prev) =>
+      prev.map((p, pIndex) => {
+        if (pIndex !== periodeIndex) return p;
+
+        // On ne supprime que les missions ajoutées (index > 0) pour
+        // respecter ton "retirer celles ajoutées en plus de la première"
+        if (missionIndex === 0) return p;
+        if (p.missions.length <= 1) return p;
+
+        return {
+          ...p,
+          missions: p.missions.filter((_, mIndex) => mIndex !== missionIndex),
+        };
+      })
+    );
+  };
+
+  // Nettoyage des périodes/missions vides
+  const sanitizePeriodes = (rawPeriodes) => {
+    return rawPeriodes
+      .map((p) => {
+        const cleanMissions = (p.missions || []).filter((m) => {
+          const titre = (m.titre || '').trim();
+          const desc = (m.description || '').trim();
+          const comp = (m.competences || '').trim();
+          return titre || desc || comp;
+        });
+
+        return {
+          ...p,
+          missions: cleanMissions,
+        };
+      })
+      .filter((p) => {
+        const hasTitre = (p.titre || '').trim();
+        const hasDates = p.dateDebut || p.dateFin;
+        const hasMissions = (p.missions || []).length > 0;
+        return hasTitre || hasDates || hasMissions;
+      });
+  };
+
+  // ---------- SUBMIT ----------
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const cleanedPeriodes = sanitizePeriodes(periodes);
+
+      if (!cleanedPeriodes.length) {
+        setError(
+          'Veuillez renseigner au moins une période ou une mission avant de sauvegarder.'
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Construction éventuelle de l’évènement de calendrier (Option A)
+      let calendarEventPayload = null;
+      if (
+        calendarEvent.enable &&
+        calendarEvent.title.trim() &&
+        calendarEvent.date
+      ) {
+        calendarEventPayload = {
+          title: calendarEvent.title.trim(),
+          date: calendarEvent.date,
+          time: calendarEvent.time || null,
+          location: calendarEvent.location || null,
+          participantsRaw: calendarEvent.participants || '',
+          notes: calendarEvent.notes || '',
+        };
+      }
+
+      const payload = {
+        periodes: cleanedPeriodes,
+        status: 'EN_COURS',
+        createdAt: new Date().toISOString(),
+        calendarEvent: calendarEventPayload,
+      };
+
+      await journalService.createJournal(payload);
+
+      navigate('/dashboard?tab=journal');
+    } catch (err) {
+      console.error(err);
+      setError("Erreur lors de l'enregistrement du journal.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Ajouter une mission à une période
-  const handleAddMission = (periodeId) => {
-    setPeriodes(periodes.map(periode => {
-      if (periode.id === periodeId) {
-        const newMission = {
-          id: periode.missions.length + 1,
-          titre: '',
-          description: '',
-          competences: []
-        };
-        return {
-          ...periode,
-          missions: [...periode.missions, newMission]
-        };
-      }
-      return periode;
-    }));
-  };
-
-  // Supprimer une mission
-  const handleRemoveMission = (periodeId, missionId) => {
-    setPeriodes(periodes.map(periode => {
-      if (periode.id === periodeId && periode.missions.length > 1) {
-        return {
-          ...periode,
-          missions: periode.missions.filter(m => m.id !== missionId)
-        };
-      }
-      return periode;
-    }));
-  };
-
-  // Mettre à jour les dates d'une période
-  const handlePeriodeChange = (periodeId, field, value) => {
-    setPeriodes(periodes.map(periode => {
-      if (periode.id === periodeId) {
-        return { ...periode, [field]: value };
-      }
-      return periode;
-    }));
-  };
-
-  // Mettre à jour une mission
-  const handleMissionChange = (periodeId, missionId, field, value) => {
-    setPeriodes(periodes.map(periode => {
-      if (periode.id === periodeId) {
-        return {
-          ...periode,
-          missions: periode.missions.map(mission => {
-            if (mission.id === missionId) {
-              return { ...mission, [field]: value };
-            }
-            return mission;
-          })
-        };
-      }
-      return periode;
-    }));
-  };
-
-  // Gérer la sélection des compétences
-  const handleCompetenceToggle = (periodeId, missionId, competence) => {
-    setPeriodes(periodes.map(periode => {
-      if (periode.id === periodeId) {
-        return {
-          ...periode,
-          missions: periode.missions.map(mission => {
-            if (mission.id === missionId) {
-              const competences = mission.competences.includes(competence)
-                ? mission.competences.filter(c => c !== competence)
-                : [...mission.competences, competence];
-              return { ...mission, competences };
-            }
-            return mission;
-          })
-        };
-      }
-      return periode;
-    }));
-  };
-
-  // Valider le formulaire
-  const validateForm = () => {
-    const newErrors = {};
-    
-    periodes.forEach((periode, pIndex) => {
-      if (!periode.dateDebut) {
-        newErrors[`periode_${periode.id}_dateDebut`] = 'La date de début est requise';
-      }
-      if (!periode.dateFin) {
-        newErrors[`periode_${periode.id}_dateFin`] = 'La date de fin est requise';
-      }
-      if (periode.dateDebut && periode.dateFin && periode.dateDebut > periode.dateFin) {
-        newErrors[`periode_${periode.id}_dates`] = 'La date de fin doit être après la date de début';
-      }
-
-      periode.missions.forEach((mission, mIndex) => {
-        if (!mission.titre.trim()) {
-          newErrors[`mission_${periode.id}_${mission.id}_titre`] = 'Le titre de la mission est requis';
-        }
-        if (!mission.description.trim()) {
-          newErrors[`mission_${periode.id}_${mission.id}_description`] = 'La description est requise';
-        }
-        if (mission.competences.length === 0) {
-          newErrors[`mission_${periode.id}_${mission.id}_competences`] = 'Sélectionnez au moins une compétence';
-        }
-      });
-    });
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Soumettre le formulaire
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  if (!validateForm()) {
-    return;
-  }
-
-  setIsLoading(true);
-
-  try {
-    // Créer l'objet journal
-    const journal = {
-      id: Date.now().toString(), // ID temporaire
-      periodes: periodes,
-      status: 'en_cours',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      userId: currentUser?._id
-    };
-
-    // Sauvegarder dans localStorage (temporaire)
-    const existingJournaux = localStorage.getItem('journaux');
-    const journaux = existingJournaux ? JSON.parse(existingJournaux) : [];
-    journaux.push(journal);
-    localStorage.setItem('journaux', JSON.stringify(journaux));
-
-    console.log('✅ Journal sauvegardé:', journal);
-
-    // TODO: Remplacer par un vrai appel API
-    // await api.post('/api/journaux', journal);
-
-    alert('Journal de formation enregistré avec succès !');
-    navigate('/dashboard');
-
-  } catch (error) {
-    console.error('❌ Erreur lors de la sauvegarde:', error);
-    setErrors({ submit: 'Une erreur est survenue lors de la sauvegarde' });
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  // ---------- Rendu ----------
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="text-gray-600 hover:text-gray-800"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-              </button>
-              <h1 className="text-xl font-bold text-gray-800">📔 Journal de Formation</h1>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      {/* Lien retour tableau de bord */}
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard?tab=journal')}
+          className="inline-flex items-center text-sm text-primary-600 hover:text-primary-800"
+        >
+          ← Retour au tableau de bord
+        </button>
+      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Intro */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            Renseignez vos activités mensuelles
-          </h2>
-          <p className="text-gray-600">
-            Consultez l'historique de votre formation et ajoutez vos nouvelles activités par période.
-          </p>
-        </div>
+      <h1 className="text-2xl font-semibold mb-6">Créer une note mensuelle</h1>
 
-        {/* Formulaire */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          
-          {/* Périodes */}
-          {periodes.map((periode, periodeIndex) => (
-            <div key={periode.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
-              {/* Header de la période */}
-              <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-6 py-4 flex justify-between items-center">
-                <div>
-                  <h3 className="text-xl font-bold">PERIODE {periode.id}</h3>
-                  <p className="text-blue-100 text-sm mt-1">
-                    {currentUser?.firstName} {currentUser?.lastName} - Étudiant
-                  </p>
-                </div>
-                {periodes.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePeriode(periode.id)}
-                    className="text-white hover:text-red-200 transition"
-                    title="Supprimer cette période"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                )}
+      {error && (
+        <div className="mb-4 text-red-600 text-sm bg-red-50 border border-red-200 px-4 py-2 rounded">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {periodes.map((periode, pIndex) => (
+          <div
+            key={periode.id}
+            className="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4"
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Période {pIndex + 1}
+                </h2>
+                <span className="text-xs text-gray-500">
+                  {periode.dateDebut && periode.dateFin
+                    ? `${periode.dateDebut} → ${periode.dateFin}`
+                    : 'Dates non renseignées'}
+                </span>
               </div>
 
-              <div className="p-6 space-y-6">
-                
-                {/* Dates de la période */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date/Période <span className="text-red-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <input
-                        type="date"
-                        value={periode.dateDebut}
-                        onChange={(e) => handlePeriodeChange(periode.id, 'dateDebut', e.target.value)}
-                        className={`input-field ${errors[`periode_${periode.id}_dateDebut`] ? 'border-red-500' : ''}`}
-                        disabled={isLoading}
-                      />
-                      {errors[`periode_${periode.id}_dateDebut`] && (
-                        <p className="mt-1 text-xs text-red-600">{errors[`periode_${periode.id}_dateDebut`]}</p>
-                      )}
-                    </div>
-                    <div>
-                      <input
-                        type="date"
-                        value={periode.dateFin}
-                        onChange={(e) => handlePeriodeChange(periode.id, 'dateFin', e.target.value)}
-                        className={`input-field ${errors[`periode_${periode.id}_dateFin`] ? 'border-red-500' : ''}`}
-                        disabled={isLoading}
-                      />
-                      {errors[`periode_${periode.id}_dateFin`] && (
-                        <p className="mt-1 text-xs text-red-600">{errors[`periode_${periode.id}_dateFin`]}</p>
-                      )}
-                    </div>
-                  </div>
-                  {errors[`periode_${periode.id}_dates`] && (
-                    <p className="mt-1 text-xs text-red-600">{errors[`periode_${periode.id}_dates`]}</p>
-                  )}
-                  <p className="mt-1 text-xs text-gray-500">
-                    {periode.dateDebut && periode.dateFin && (
-                      `${periode.dateDebut} - ${periode.dateFin}`
+              {periodes.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removePeriode(pIndex)}
+                  className="text-xs text-red-600 hover:text-red-800"
+                >
+                  Supprimer la période
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Intitulé de la période
+                </label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="Ex : Missions de novembre"
+                  value={periode.titre}
+                  onChange={(e) =>
+                    handlePeriodeChange(pIndex, 'titre', e.target.value)
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date de début
+                </label>
+                <input
+                  type="date"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  value={periode.dateDebut}
+                  onChange={(e) =>
+                    handlePeriodeChange(pIndex, 'dateDebut', e.target.value)
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date de fin
+                </label>
+                <input
+                  type="date"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  value={periode.dateFin}
+                  onChange={(e) =>
+                    handlePeriodeChange(pIndex, 'dateFin', e.target.value)
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {periode.missions.map((mission, mIndex) => (
+                <div
+                  key={mission.id}
+                  className="border border-gray-200 rounded-md p-4 space-y-3"
+                >
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-semibold text-gray-700">
+                      Mission {mIndex + 1}
+                    </h3>
+
+                    {/* On autorise la suppression pour les missions ajoutées (index > 0) */}
+                    {mIndex > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => removeMission(pIndex, mIndex)}
+                        className="text-xs text-red-600 hover:text-red-800"
+                      >
+                        Supprimer la mission
+                      </button>
                     )}
-                  </p>
-                </div>
+                  </div>
 
-                {/* Missions */}
-                {periode.missions.map((mission, missionIndex) => (
-                  <div key={mission.id} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
-                    
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-semibold text-gray-800">Mission {missionIndex + 1}</h4>
-                      {periode.missions.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveMission(periode.id, mission.id)}
-                          className="text-red-600 hover:text-red-800 text-sm"
-                        >
-                          Supprimer
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Titre de la mission */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Titre de la mission <span className="text-red-500">*</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Intitulé de la mission
                       </label>
                       <input
                         type="text"
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="Ex : Développement d'une API REST"
                         value={mission.titre}
-                        onChange={(e) => handleMissionChange(periode.id, mission.id, 'titre', e.target.value)}
-                        className={`input-field ${errors[`mission_${periode.id}_${mission.id}_titre`] ? 'border-red-500' : ''}`}
-                        placeholder="Ex: Formation et documentation sur les systèmes de supervision"
-                        disabled={isLoading}
+                        onChange={(e) =>
+                          handleMissionChange(
+                            pIndex,
+                            mIndex,
+                            'titre',
+                            e.target.value
+                          )
+                        }
                       />
-                      {errors[`mission_${periode.id}_${mission.id}_titre`] && (
-                        <p className="mt-1 text-xs text-red-600">{errors[`mission_${periode.id}_${mission.id}_titre`]}</p>
-                      )}
                     </div>
-
-                    {/* Tâches réalisées */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tâches réalisées <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={mission.description}
-                        onChange={(e) => handleMissionChange(periode.id, mission.id, 'description', e.target.value)}
-                        className={`input-field min-h-[120px] ${errors[`mission_${periode.id}_${mission.id}_description`] ? 'border-red-500' : ''}`}
-                        placeholder="Décrivez en détail les tâches réalisées pendant cette mission..."
-                        disabled={isLoading}
-                      />
-                      {errors[`mission_${periode.id}_${mission.id}_description`] && (
-                        <p className="mt-1 text-xs text-red-600">{errors[`mission_${periode.id}_${mission.id}_description`]}</p>
-                      )}
-                    </div>
-
-                    {/* Compétences */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Compétences mises en œuvre <span className="text-red-500">*</span>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Compétences mobilisées
                       </label>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {competencesList.map((competence) => (
-                          <label
-                            key={competence}
-                            className={`flex items-center space-x-2 p-3 border-2 rounded-lg cursor-pointer transition ${
-                              mission.competences.includes(competence)
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-300 hover:border-blue-300'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={mission.competences.includes(competence)}
-                              onChange={() => handleCompetenceToggle(periode.id, mission.id, competence)}
-                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                              disabled={isLoading}
-                            />
-                            <span className="text-sm font-medium text-gray-700">{competence}</span>
-                          </label>
-                        ))}
-                      </div>
-                      {errors[`mission_${periode.id}_${mission.id}_competences`] && (
-                        <p className="mt-1 text-xs text-red-600">{errors[`mission_${periode.id}_${mission.id}_competences`]}</p>
-                      )}
+                      <input
+                        type="text"
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="Ex : C#, travail en équipe."
+                        value={mission.competences}
+                        onChange={(e) =>
+                          handleMissionChange(
+                            pIndex,
+                            mIndex,
+                            'competences',
+                            e.target.value
+                          )
+                        }
+                      />
                     </div>
-
                   </div>
-                ))}
 
-                {/* Bouton Ajouter mission */}
-                <button
-                  type="button"
-                  onClick={() => handleAddMission(periode.id)}
-                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition font-medium"
-                  disabled={isLoading}
-                >
-                  + Ajouter une mission
-                </button>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Description de la mission
+                    </label>
+                    <textarea
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      rows={3}
+                      placeholder="Décrivez ce que vous avez réalisé, les outils utilisés, les résultats."
+                      value={mission.description}
+                      onChange={(e) =>
+                        handleMissionChange(
+                          pIndex,
+                          mIndex,
+                          'description',
+                          e.target.value
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              ))}
 
+              <button
+                type="button"
+                onClick={() => addMission(pIndex)}
+                className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100"
+              >
+                + Ajouter une mission
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {/* ---------- SECTION ÉVÉNEMENT CALENDRIER (Option A) ---------- */}
+        <div className="bg-white rounded-lg shadow border border-primary-100 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-800">
+              Lier un événement de calendrier (optionnel)
+            </h2>
+            <label className="inline-flex items-center space-x-2 text-sm">
+              <input
+                type="checkbox"
+                className="rounded border-gray-300"
+                checked={calendarEvent.enable}
+                onChange={(e) =>
+                  setCalendarEvent((prev) => ({
+                    ...prev,
+                    enable: e.target.checked,
+                  }))
+                }
+              />
+              <span>Créer un événement lié à ce journal</span>
+            </label>
+          </div>
+
+          {calendarEvent.enable && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titre de l&apos;événement
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder='Ex : Entretien semestriel'
+                    value={calendarEvent.title}
+                    onChange={(e) =>
+                      setCalendarEvent((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    value={calendarEvent.date}
+                    onChange={(e) =>
+                      setCalendarEvent((prev) => ({
+                        ...prev,
+                        date: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Heure
+                  </label>
+                  <input
+                    type="time"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    value={calendarEvent.time}
+                    onChange={(e) =>
+                      setCalendarEvent((prev) => ({
+                        ...prev,
+                        time: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Lieu
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Ex : ESEO Angers, Salle de soutenance 2"
+                    value={calendarEvent.location}
+                    onChange={(e) =>
+                      setCalendarEvent((prev) => ({
+                        ...prev,
+                        location: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Participants (emails séparés par des virgules)
+                </label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="Ex : tuteur@eseo.fr, maitre.entreprise@boite.com, jury@eseo.fr"
+                  value={calendarEvent.participants}
+                  onChange={(e) =>
+                    setCalendarEvent((prev) => ({
+                      ...prev,
+                      participants: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notes / ordre du jour (optionnel)
+                </label>
+                <textarea
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  rows={3}
+                  placeholder="Ex : Préparer le bilan semestriel, les objectifs à venir, etc."
+                  value={calendarEvent.notes}
+                  onChange={(e) =>
+                    setCalendarEvent((prev) => ({
+                      ...prev,
+                      notes: e.target.value,
+                    }))
+                  }
+                />
               </div>
             </div>
-          ))}
+          )}
+        </div>
 
-          {/* Bouton Ajouter période */}
+        {/* Boutons bas de page */}
+        <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={handleAddPeriode}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-lg transition shadow-md"
-            disabled={isLoading}
+            onClick={addPeriode}
+            className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
           >
             + Ajouter une période
           </button>
 
-          {/* Erreur générale */}
-          {errors.submit && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-800">{errors.submit}</p>
-            </div>
-          )}
-
-          {/* Boutons d'action */}
-          <div className="flex justify-between items-center pt-6">
+          <div className="space-x-3">
             <button
               type="button"
-              onClick={() => navigate('/dashboard')}
-              className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
-              disabled={isLoading}
+              onClick={() => navigate('/dashboard?tab=journal')}
+              className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Annuler
             </button>
+
             <button
               type="submit"
-              className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition shadow-md"
-              disabled={isLoading}
+              disabled={isSubmitting}
+              className="inline-flex items-center px-6 py-3 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-60"
             >
-              {isLoading ? 'Enregistrement...' : 'Enregistrer le journal'}
+              {isSubmitting ? 'Enregistrement...' : 'Enregistrer le journal'}
             </button>
           </div>
-
-        </form>
-
-      </div>
+        </div>
+      </form>
     </div>
   );
 };

@@ -7,8 +7,9 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const cors = require('cors');
-
+const journalRoutes = require('./journal/routes');
 const app = express();
+const calendarRoutes = require('./calendar/routes');
 
 // Environment validation
 const requiredEnvVars = [
@@ -60,12 +61,26 @@ app.use(helmet({
 }));
 
 // CORS Configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+  'http://localhost:5173',
+  'http://localhost:4173', // (si tu build/testes en preview Vite)
+];
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    exposedHeaders: ['X-Total-Count']
+  origin: function (origin, callback) {
+    // autoriser aussi les requêtes sans origin (ex: curl, Postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS: origine non autorisée -> ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-Total-Count'],
 }));
 
 // Body parsing middleware with size limits
