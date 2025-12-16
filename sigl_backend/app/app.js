@@ -138,6 +138,7 @@ if (process.env.NODE_ENV === 'development') {
 const testRoutes = require('./test/routes');
 const userRoutes = require('./user/routes');
 const authRoutes = require('./auth/auth.routes');
+const calendarRoutes = require('./calendar/routes');
 
 // Health check route
 app.get('/status', (req, res) => {
@@ -153,7 +154,6 @@ app.get('/status', (req, res) => {
 // Routes registration
 app.use('/api/test', testRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/journaux', journalRoutes);
 app.use('/api/calendar', calendarRoutes);
 
 // Apply stricter rate limiting to auth endpoints
