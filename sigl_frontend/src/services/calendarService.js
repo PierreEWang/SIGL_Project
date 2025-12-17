@@ -1,57 +1,44 @@
-import axios from 'axios';
+import api from './api';
 
-// Configuration de base pour l'API calendrier
-const CALENDAR_API_BASE_URL = 'http://localhost:3000/api/calendar';
-
-// Instance axios spécifique pour le calendrier
-const calendarApi = axios.create({
-  baseURL: CALENDAR_API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000,
-});
-
-// Intercepteur pour gérer les erreurs
-calendarApi.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('Erreur API Calendrier:', error);
-    
-    // Gestion des erreurs réseau
-    if (!error.response) {
-      throw new Error('Erreur de connexion au serveur. Vérifiez votre connexion internet.');
-    }
-    
-    // Gestion des erreurs HTTP
-    switch (error.response.status) {
-      case 404:
-        throw new Error('Ressource non trouvée.');
-      case 500:
-        throw new Error('Erreur interne du serveur. Veuillez réessayer plus tard.');
-      default:
-        throw new Error(error.response.data?.message || 'Une erreur est survenue.');
-    }
-  }
-);
+// Instance Axios spécifique pour le calendrier
+const calendarApi = api;
 
 /**
- * Service pour la gestion des événements du calendrier
+ * Service de gestion du calendrier
+ * Gère les événements, catégories et cache
  */
 class CalendarService {
-  
+  // Cache pour optimiser les requêtes
+  static cache = {
+    events: {},
+    categories: null,
+    timestamp: {}
+  };
+
+  // Durée de validité du cache (5 minutes)
+  static CACHE_DURATION = 5 * 60 * 1000;
+
+  /**
+   * Vide le cache
+   */
+  static clearCache() {
+    this.cache = {
+      events: {},
+      categories: null,
+      timestamp: {}
+    };
+  }
+
   /**
    * Récupère tous les événements
-   * @param {string} category - Catégorie optionnelle pour filtrer les événements
-   * @returns {Promise<Array>} Liste des événements
    */
   static async getAllEvents(category = null) {
     try {
       const params = category ? { category } : {};
-      const response = await calendarApi.get('/events', { params });
+      const response = await calendarApi.get('/calendar/events', { params });
       
       if (response.data.success) {
-        return response.data.data;
+        return response.data.data || [];
       } else {
         throw new Error(response.data.message || 'Erreur lors de la récupération des événements');
       }
@@ -63,16 +50,10 @@ class CalendarService {
 
   /**
    * Récupère un événement par son ID
-   * @param {number} id - ID de l'événement
-   * @returns {Promise<Object>} Données de l'événement
    */
   static async getEventById(id) {
     try {
-      if (!id || isNaN(id)) {
-        throw new Error('ID d\'événement invalide');
-      }
-
-      const response = await calendarApi.get(`/events/${id}`);
+      const response = await calendarApi.get(`/calendar/events/${id}`);
       
       if (response.data.success) {
         return response.data.data;
@@ -86,21 +67,38 @@ class CalendarService {
   }
 
   /**
+   * Récupère toutes les catégories disponibles
+   */
+  static async getCategories() {
+    try {
+      // Utiliser le cache si disponible
+      if (this.cache.categories) {
+        return this.cache.categories;
+      }
+
+      const response = await calendarApi.get('/calendar/categories');
+      
+      if (response.data.success) {
+        this.cache.categories = response.data.data || [];
+        return this.cache.categories;
+      } else {
+        throw new Error(response.data.message || 'Erreur lors de la récupération des catégories');
+      }
+    } catch (error) {
+      console.error('Erreur getCategories:', error);
+      return ['réunion', 'rendez-vous', 'culturel', 'formation'];
+    }
+  }
+
+  /**
    * Récupère les événements d'un mois spécifique
-   * @param {number} year - Année
-   * @param {number} month - Mois (1-12)
-   * @returns {Promise<Array>} Liste des événements du mois
    */
   static async getEventsByMonth(year, month) {
     try {
-      if (!year || !month || isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-        throw new Error('Paramètres de date invalides');
-      }
-
-      const response = await calendarApi.get(`/events/month/${year}/${month}`);
+      const response = await calendarApi.get(`/calendar/events/month/${year}/${month}`);
       
       if (response.data.success) {
-        return response.data.data;
+        return response.data.data || [];
       } else {
         throw new Error(response.data.message || 'Erreur lors de la récupération des événements du mois');
       }
@@ -111,30 +109,118 @@ class CalendarService {
   }
 
   /**
-   * Récupère toutes les catégories disponibles
-   * @returns {Promise<Array>} Liste des catégories
+   * Récupère les événements avec cache
    */
-  static async getCategories() {
+  static async getCachedEventsByMonth(year, month) {
+    const cacheKey = `${year}-${month}`;
+    const now = Date.now();
+
+    if (
+      this.cache.events[cacheKey] &&
+      this.cache.timestamp[cacheKey] &&
+      (now - this.cache.timestamp[cacheKey] < this.CACHE_DURATION)
+    ) {
+      return this.cache.events[cacheKey];
+    }
+
+    const events = await this.getEventsByMonth(year, month);
+    this.cache.events[cacheKey] = events;
+    this.cache.timestamp[cacheKey] = now;
+
+    return events;
+  }
+
+  /**
+   * Crée un nouvel événement pour l'utilisateur connecté
+   */
+  static async createEvent(eventData) {
     try {
-      const response = await calendarApi.get('/categories');
-      
+      const response = await calendarApi.post('/calendar/my-events', eventData);
       if (response.data.success) {
+        this.clearCache(); // Vider le cache
         return response.data.data;
       } else {
-        throw new Error(response.data.message || 'Erreur lors de la récupération des catégories');
+        throw new Error(response.data.error || 'Erreur lors de la création de l\'événement');
       }
     } catch (error) {
-      console.error('Erreur getCategories:', error);
+      console.error('Erreur createEvent:', error);
       throw error;
     }
   }
 
   /**
-   * Formate une date pour l'affichage en français
-   * @param {string} dateString - Date au format ISO
-   * @returns {string} Date formatée
+   * Récupère les événements de l'utilisateur connecté
+   */
+  static async getMyEvents() {
+    try {
+      const response = await calendarApi.get('/calendar/my-events');
+      if (response.data.success) {
+        return response.data.data;
+      } else {
+        throw new Error(response.data.error || 'Erreur lors de la récupération des événements');
+      }
+    } catch (error) {
+      console.error('Erreur getMyEvents:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Met à jour un événement
+   */
+  static async updateEvent(eventId, eventData) {
+    try {
+      const response = await calendarApi.put(`/calendar/my-events/${eventId}`, eventData);
+      if (response.data.success) {
+        this.clearCache();
+        return response.data.data;
+      } else {
+        throw new Error(response.data.error || 'Erreur lors de la mise à jour');
+      }
+    } catch (error) {
+      console.error('Erreur updateEvent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Supprime un événement
+   */
+  static async deleteEvent(eventId) {
+    try {
+      const response = await calendarApi.delete(`/calendar/my-events/${eventId}`);
+      if (response.data.success) {
+        this.clearCache();
+        return true;
+      } else {
+        throw new Error(response.data.error || 'Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('Erreur deleteEvent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Groupe les événements par date
+   */
+  static groupEventsByDate(events) {
+    return events.reduce((acc, event) => {
+      const dateKey = event.date; // Format YYYY-MM-DD
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(event);
+      return acc;
+    }, {});
+  }
+
+  /**
+   * Formate une date au format français
    */
   static formatDate(dateString) {
+    if (!dateString) return '';
+    
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString('fr-FR', {
@@ -144,127 +230,56 @@ class CalendarService {
         day: 'numeric'
       });
     } catch (error) {
-      console.error('Erreur formatage date:', error);
       return dateString;
     }
   }
 
   /**
-   * Formate une heure pour l'affichage
-   * @param {string} timeString - Heure au format HH:MM
-   * @returns {string} Heure formatée
+   * Formate une heure au format français
    */
   static formatTime(timeString) {
+    if (!timeString) return '';
+    
     try {
-      if (!timeString) return '';
-      
       const [hours, minutes] = timeString.split(':');
       return `${hours}h${minutes}`;
     } catch (error) {
-      console.error('Erreur formatage heure:', error);
       return timeString;
     }
   }
 
   /**
-   * Obtient la couleur associée à une catégorie
-   * @param {string} category - Catégorie de l'événement
-   * @returns {Object} Objet contenant les classes CSS pour la couleur
+   * Retourne les couleurs pour une catégorie
    */
   static getCategoryColor(category) {
     const colors = {
       'réunion': {
-        bg: 'bg-blue-100',
-        border: 'border-blue-500',
-        text: 'text-blue-800',
+        bg: 'bg-blue-50',
+        text: 'text-blue-700',
+        border: 'border-blue-300',
         dot: 'bg-blue-500'
       },
       'rendez-vous': {
-        bg: 'bg-green-100',
-        border: 'border-green-500',
-        text: 'text-green-800',
-        dot: 'bg-green-500'
-      },
-      'culturel': {
-        bg: 'bg-purple-100',
-        border: 'border-purple-500',
-        text: 'text-purple-800',
+        bg: 'bg-purple-50',
+        text: 'text-purple-700',
+        border: 'border-purple-300',
         dot: 'bg-purple-500'
       },
+      'culturel': {
+        bg: 'bg-pink-50',
+        text: 'text-pink-700',
+        border: 'border-pink-300',
+        dot: 'bg-pink-500'
+      },
       'formation': {
-        bg: 'bg-orange-100',
-        border: 'border-orange-500',
-        text: 'text-orange-800',
-        dot: 'bg-orange-500'
+        bg: 'bg-green-50',
+        text: 'text-green-700',
+        border: 'border-green-300',
+        dot: 'bg-green-500'
       }
     };
 
-    return colors[category?.toLowerCase()] || {
-      bg: 'bg-gray-100',
-      border: 'border-gray-500',
-      text: 'text-gray-800',
-      dot: 'bg-gray-500'
-    };
-  }
-
-  /**
-   * Groupe les événements par date
-   * @param {Array} events - Liste des événements
-   * @returns {Object} Événements groupés par date
-   */
-  static groupEventsByDate(events) {
-    return events.reduce((grouped, event) => {
-      const date = event.date;
-      if (!grouped[date]) {
-        grouped[date] = [];
-      }
-      grouped[date].push(event);
-      return grouped;
-    }, {});
-  }
-
-  /**
-   * Cache simple pour éviter les appels API répétés
-   */
-  static cache = new Map();
-  static cacheTimeout = 5 * 60 * 1000; // 5 minutes
-
-  /**
-   * Récupère les événements avec mise en cache
-   * @param {number} year - Année
-   * @param {number} month - Mois
-   * @returns {Promise<Array>} Événements du mois
-   */
-  static async getCachedEventsByMonth(year, month) {
-    const cacheKey = `events-${year}-${month}`;
-    const cached = this.cache.get(cacheKey);
-    
-    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
-      return cached.data;
-    }
-
-    try {
-      const events = await this.getEventsByMonth(year, month);
-      this.cache.set(cacheKey, {
-        data: events,
-        timestamp: Date.now()
-      });
-      return events;
-    } catch (error) {
-      // Si erreur et cache disponible, retourner le cache
-      if (cached) {
-        console.warn('Utilisation du cache en raison d\'une erreur API');
-        return cached.data;
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Vide le cache
-   */
-  static clearCache() {
-    this.cache.clear();
+    return colors[category?.toLowerCase()] || colors['formation'];
   }
 }
 

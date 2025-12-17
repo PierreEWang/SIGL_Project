@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import authService from '../../services/authService';
 import journalService from '../../services/journalService';
+import CalendarPage from '../calendar/CalendarPage';
 
 /**
  * Dashboard principal de l'apprenti
@@ -221,15 +222,9 @@ const StudentDashboard = () => {
 
       case 'calendar':
         return (
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-sm text-gray-600">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              Calendrier
-            </h2>
-            <p>
-              Module à venir : synchronisation du calendrier des soutenances,
-              sessions et événements.
-            </p>
-          </section>
+          <section>
+      <CalendarPage embedded={true} />
+    </section>
         );
 
       case 'entretiens':
