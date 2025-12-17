@@ -21,7 +21,6 @@ const authSchema = new mongoose.Schema({
     refreshToken: {
         type: String,
         default: null,
-        index: true
     },
     isActive: {
         type: Boolean,
