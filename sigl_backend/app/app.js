@@ -10,6 +10,9 @@ const cors = require('cors');
 const journalRoutes = require('./journal/routes');
 const app = express();
 const calendarRoutes = require('./calendar/routes');
+const testRoutes = require('./test/routes');
+const userRoutes = require('./user/routes');
+const authRoutes = require('./auth/auth.routes');
 
 // Environment validation
 const requiredEnvVars = [
@@ -134,11 +137,6 @@ if (process.env.NODE_ENV === 'development') {
     app.use(morgan('combined'));
 }
 
-// Import routes
-const testRoutes = require('./test/routes');
-const userRoutes = require('./user/routes');
-const authRoutes = require('./auth/auth.routes');
-
 // Health check route
 app.get('/status', (req, res) => {
     res.json({
@@ -153,8 +151,8 @@ app.get('/status', (req, res) => {
 // Routes registration
 app.use('/api/test', testRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/journaux', journalRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/journaux', journalRoutes)
 
 // Apply stricter rate limiting to auth endpoints
 app.use('/api/auth', authLimiter, authRoutes);

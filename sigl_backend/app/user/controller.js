@@ -2,6 +2,10 @@
 const mongoose = require('mongoose');
 const userService = require('./service');
 
+const userRepository = require('./repository');
+const authRepository = require('../auth/auth.repository');
+const authService = require('../auth/auth.service');
+
 const VALID_ROLES = ['APPRENTI', 'MA', 'TP', 'CA', 'RC', 'PROF', 'ADMIN'];
 
 const normalizeName = (value) => {
@@ -14,11 +18,51 @@ const normalizeName = (value) => {
  */
 const register = async (req, res) => {
   try {
-    const { username, email, role, firstName, lastName, prenom, nom, telephone } = req.body;
+    const {
+      username,
+      email,
+      password,
+      role,
+      firstName,
+      lastName,
+      prenom,
+      nom,
+      telephone,
+    } = req.body;
 
-    if (!username || !email) {
+    // ------------------ validations (sans casser l'existant) ------------------
+    if (!username || !email || !password) {
       return res.status(400).json({
-        error: "Le nom d'utilisateur et l'email sont obligatoires",
+        error: "Le nom d'utilisateur, l'email et le mot de passe sont obligatoires",
+      });
+    }
+
+    // Username: 3-20, caractères autorisés (cohérent avec updateUser)
+    const usernameRegex = /^[a-zA-Z0-9_.-]{3,20}$/;
+    if (!usernameRegex.test(username)) {
+      return res.status(400).json({
+        error:
+          "Nom d'utilisateur invalide (3-20 caractères, lettres/chiffres/._- uniquement)",
+      });
+    }
+
+    // Email basique
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(String(email))) {
+      return res.status(400).json({
+        error: 'Format email invalide',
+      });
+    }
+
+    // Password: ton front peut avoir “>= 6”, mais ton authService.hashPassword exige “>= 8”
+    if (typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({
+        error: 'Le mot de passe doit contenir au moins 6 caractères',
+      });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({
+        error: 'Le mot de passe doit contenir au moins 8 caractères',
       });
     }
 
@@ -29,6 +73,22 @@ const register = async (req, res) => {
       });
     }
 
+    // Vérifie doublons (email / username) AVANT création
+    const existingByEmail = await userRepository.findUserByEmail(email);
+    if (existingByEmail) {
+      return res.status(409).json({
+        error: "Un utilisateur existe déjà avec cet email",
+      });
+    }
+
+    const existingByUsername = await userRepository.findUserByUsername(username);
+    if (existingByUsername) {
+      return res.status(409).json({
+        error: "Un utilisateur existe déjà avec ce nom d'utilisateur",
+      });
+    }
+
+    // ------------------ création user (sans password) ------------------
     const result = await userService.createUser({
       username,
       email,
@@ -45,8 +105,31 @@ const register = async (req, res) => {
       });
     }
 
+    // ------------------ création credentials (Auth) ------------------
+    try {
+      const hashedPassword = await authService.hashPassword(password);
+      const userId = result.data?._id || result.data?.id; // selon ce que renvoie toSafeObject()
+      await authRepository.createAuthRecord(userId, hashedPassword);
+    } catch (authErr) {
+      // Rollback best-effort: si user créé mais pas credentials, on supprime le user
+      try {
+        const userId = result.data?._id || result.data?.id;
+        if (userId) {
+          await userService.deleteUserAccount(userId);
+        }
+      } catch (rollbackErr) {
+        console.error('register rollback error:', rollbackErr);
+      }
+
+      console.error('register auth creation error:', authErr);
+      return res.status(500).json({
+        error:
+          "Utilisateur créé, mais échec de création des identifiants. Réessaie.",
+      });
+    }
+
     return res.status(201).json({
-      message: 'Utilisateur créé avec succès',
+      message: 'Utilisateur enregistré avec succès',
       user: result.data,
     });
   } catch (error) {
@@ -72,15 +155,15 @@ const getProfile = async (req, res) => {
 
     const result = await userService.getUserProfile(userId);
 
-    if (!result.success) {
+    if (result.success) {
+      return res.status(200).json({
+        user: result.data,
+      });
+    } else {
       return res.status(404).json({
         error: result.error,
       });
     }
-
-    return res.status(200).json({
-      user: result.data,
-    });
   } catch (error) {
     console.error('getProfile error:', error);
     return res.status(500).json({
@@ -95,6 +178,7 @@ const getProfile = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const userId = req.params.id;
+    const updateData = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
@@ -102,117 +186,39 @@ const updateUser = async (req, res) => {
       });
     }
 
-    const {
-      username,
-      email,
-      role,
-      firstName,
-      lastName,
-      prenom,
-      nom,
-      telephone,
-      mfaEnabled,
-      mfaMethod,
-      avatar,
-    } = req.body;
-
-    const updateData = {};
-
-    if (username) {
-      const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-      if (!usernameRegex.test(username)) {
+    // Validation: username
+    if (updateData.username) {
+      const usernameRegex = /^[a-zA-Z0-9_.-]{3,20}$/;
+      if (!usernameRegex.test(updateData.username)) {
         return res.status(400).json({
           error:
-            "Le nom d'utilisateur doit contenir entre 3 et 20 caractères et ne contenir que des lettres, des chiffres et des underscores",
+            "Nom d'utilisateur invalide (3-20 caractères, lettres/chiffres/._- uniquement)",
         });
       }
-      updateData.username = username;
     }
 
-    if (email) {
+    // Validation: email
+    if (updateData.email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!emailRegex.test(updateData.email)) {
         return res.status(400).json({
-          error: "Format d'email invalide",
+          error: 'Format email invalide',
         });
       }
-      updateData.email = email;
     }
 
-    if (role) {
-      if (!VALID_ROLES.includes(role)) {
-        return res.status(400).json({
-          error: `Le rôle doit être l'un des suivants : ${VALID_ROLES.join(', ')}`,
-        });
-      }
-      updateData.role = role;
+    // Validation: role
+    if (updateData.role && !VALID_ROLES.includes(updateData.role)) {
+      return res.status(400).json({
+        error: `Le rôle doit être l'un des suivants : ${VALID_ROLES.join(', ')}`,
+      });
     }
 
-    if (telephone) {
-      const phoneDigits = String(telephone).replace(/\D/g, '');
-      if (phoneDigits.length < 8 || phoneDigits.length > 15) {
-        return res.status(400).json({
-          error: 'Le numéro de téléphone doit contenir entre 8 et 15 chiffres',
-        });
-      }
-      updateData.telephone = telephone;
-    }
-
-    if (typeof mfaEnabled === 'boolean') {
-      updateData.mfaEnabled = mfaEnabled;
-    }
-
-    if (mfaMethod) {
-      if (!['email', 'sms'].includes(mfaMethod)) {
-        return res.status(400).json({
-          error: 'La méthode MFA doit être "email" ou "sms"',
-        });
-      }
-      if (mfaMethod === 'sms' && !telephone) {
-        return res.status(400).json({
-          error: 'Un numéro de téléphone est requis pour la méthode MFA "sms"',
-        });
-      }
-      updateData.mfaMethod = mfaMethod;
-    }
-
-    const resolvedFirstName = normalizeName(firstName ?? prenom);
-    const resolvedLastName = normalizeName(lastName ?? nom);
-
-    if (resolvedFirstName) {
-      updateData.firstName = resolvedFirstName;
-    }
-    if (resolvedLastName) {
-      updateData.lastName = resolvedLastName;
-      updateData.nom = resolvedLastName; // pour cohérence d'affichage existante
-    }
-
-    // Avatar (data URL)
-    if (typeof avatar === 'string') {
-      const trimmed = avatar.trim();
-
-      if (trimmed.length === 0) {
-        updateData.avatar = null;
-      } else {
-        if (!trimmed.startsWith('data:image/')) {
-          return res.status(400).json({
-            error: "L'avatar doit être une data URL d'image",
-          });
-        }
-        if (trimmed.length > 5 * 1024 * 1024) {
-          return res.status(400).json({
-            error: "L'avatar est trop volumineux (limite ~5 Mo)",
-          });
-        }
-        updateData.avatar = trimmed;
-      }
-    }
-
-    const result = await userService.updateUserInfo(userId, updateData);
+    const result = await userService.updateUserInfo(userId, updateData)
 
     if (result.success) {
       return res.status(200).json({
-        message: 'Profil mis à jour avec succès',
+        message: result.message,
         user: result.data,
       });
     } else {
