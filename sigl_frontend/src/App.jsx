@@ -12,6 +12,12 @@ import ProfilePage from './pages/profile/ProfilePage'; // ta page profil (branch
 import CalendarPage from './pages/calendar/CalendarPage'; // branche calendrier
 import EventDetailPage from './pages/calendar/EventDetailPage'; // branche calendrier
 
+import DemandeEntretienPage from './pages/entretien/DemandeEntretienPage';
+import MesEntretiensPage from './pages/entretien/MesEntretiensPage';
+import PlanifierSoutenancePage from './pages/soutenance/PlanifierSoutenancePage';
+import MaSoutenancePage from './pages/soutenance/MaSoutenancePage';
+import GestionSoutenancesPage from './pages/soutenance/GestionSoutenancesPage';
+
 function App() {
   return (
     <BrowserRouter>
@@ -31,6 +37,15 @@ function App() {
         {/* Calendrier global */}
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/calendar/event/:id" element={<EventDetailPage />} />
+
+        {/* Entretien routes */}
+        <Route path="/entretien/demande" element={<DemandeEntretienPage />} />
+        <Route path="/entretien/mes-entretiens" element={<MesEntretiensPage />} />
+
+        {/* Soutenance routes */}
+        <Route path="/soutenance/planifier" element={<PlanifierSoutenancePage />} />
+        <Route path="/soutenance/ma-soutenance" element={<MaSoutenancePage />} />
+        <Route path="/soutenance/gestion" element={<GestionSoutenancesPage />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -28,7 +28,7 @@ router.get(
 router.get('/available-contacts', authenticate, async (req, res) => {
     try {
         const users = await Utilisateur.find(
-            { role: { $in: ['TP', 'MA', 'PROF', 'CA', 'RC'] } },
+            { role: { $in: ['APPRENTI', 'TP', 'MA', 'PROF', 'CA', 'RC'] } },
             'nom email role _id'
         );
         res.json({ success: true, users });
