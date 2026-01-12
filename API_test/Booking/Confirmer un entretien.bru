@@ -1,0 +1,19 @@
+meta {
+  name: Confirmer un entretien
+  type: http
+  seq: 3
+}
+
+put {
+  url: http://localhost:3000/api/entretiens/ID_ENTRETIEN/confirmer
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer TOKEN
+}
+
+settings {
+  encodeUrl: false
+}
