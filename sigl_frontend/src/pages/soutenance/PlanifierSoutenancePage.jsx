@@ -23,12 +23,14 @@ const PlanifierSoutenancePage = () => {
 
     const loadUsers = async () => {
         try {
-            const result = await bookingService.getUtilisateurs();
-            const allUsers = result.users || [];
-            setUsers({
-                apprentis: allUsers.filter(u => u.role === 'APPRENTI'),
-                professeurs: allUsers.filter(u => u.role === 'PROF')
-            });
+            const result = await bookingService.getAvailableContacts();
+            if (result.success) {
+                const allUsers = result.users || [];
+                setUsers({
+                    apprentis: allUsers.filter(u => u.role === 'APPRENTI'),
+                    professeurs: allUsers.filter(u => u.role === 'PROF')
+                });
+            }
         } catch (err) {
             console.error('Erreur chargement utilisateurs:', err);
         } finally {
