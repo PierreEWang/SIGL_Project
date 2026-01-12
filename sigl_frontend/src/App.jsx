@@ -18,8 +18,6 @@ import PlanifierSoutenancePage from './pages/soutenance/PlanifierSoutenancePage'
 import JournalDetailPage from './pages/journal/JournalDetailPage';
 
 import ProfilePage from './pages/profile/ProfilePage'; // ta page profil (branche KC)
-import CalendarPage from './pages/calendar/CalendarPage'; // branche calendrier
-import EventDetailPage from './pages/calendar/EventDetailPage'; // branche calendrier
 
 function App() {
     return (
@@ -35,8 +33,8 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
 
         {/* Calendrier global */}
-        <Routepath="/calendar" element={<CalendarPage />} />
-                <Route path="/calendar/event/:id" element={<EventDetailPage />} />{/* Fallback */}
+        <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/calendar/event/:id" element={<EventDetailPage />} />
                 {/* Entretiens */}
                 <Route path="/entretien/liste" element={<MesEntretiensPage />} />
                 <Route path="/entretien/demande" element={<DemandeEntretienPage />} />
