@@ -1,0 +1,1010 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import authService from '../../services/authService';
+import evaluationService from '../../services/evaluationService';
+
+/**
+ * Dashboard principal du tuteur
+ * Onglets : Profil, Calendrier, Mes Étudiants, Évaluation, Historique
+ */
+const TutorDashboard = () => {
+  const [activeTab, setActiveTab] = useState('profile');
+  const [students, setStudents] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedStudentDetails, setSelectedStudentDetails] = useState(null);
+  const [studentEvaluations, setStudentEvaluations] = useState([]);
+  const [evaluations, setEvaluations] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
+
+  // Charger les données au changement d'onglet
+  useEffect(() => {
+    if (activeTab === 'students' || activeTab === 'evaluation') {
+      if (!students.length) {
+        loadStudents();
+      }
+    } else if (activeTab === 'history') {
+      loadEvaluations();
+    }
+  }, [activeTab]);
+
+  const loadStudents = async () => {
+    try {
+      setLoading(true);
+      const data = await evaluationService.getStudentsList();
+      setStudents(data);
+    } catch (error) {
+      console.error('Error loading students:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadEvaluations = async () => {
+    try {
+      setLoading(true);
+      const data = await evaluationService.getMyEvaluations();
+      setEvaluations(data);
+    } catch (error) {
+      console.error('Error loading evaluations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const viewStudentDetails = async (student) => {
+    try {
+      setLoading(true);
+      setSelectedStudentDetails(student);
+      
+      // Charger les évaluations de cet étudiant
+      const allEvals = await evaluationService.getMyEvaluations();
+      const studentEvals = allEvals.filter(e => e.etudiantId?._id === student._id);
+      setStudentEvaluations(studentEvals);
+      
+      setActiveTab('student-details');
+    } catch (error) {
+      console.error('Error loading student details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Gestion logout ---
+  const handleLogout = async () => {
+    await authService.logout();
+    navigate('/');
+  };
+
+  // --- Infos user (nom + avatar) ---
+  const displayName =
+    [currentUser?.prenom || currentUser?.firstName, currentUser?.nom || currentUser?.lastName]
+      .filter(Boolean)
+      .join(' ') ||
+    currentUser?.nom ||
+    currentUser?.email ||
+    'Utilisateur';
+
+  const avatarUrl = currentUser?.avatar || currentUser?.avatarUrl || null;
+
+  const avatarLetter =
+    displayName?.trim()?.charAt(0)?.toUpperCase() || '?';
+
+  const roleLabel = currentUser?.role || 'TUTEUR';
+
+  // --- Onglets du dashboard ---
+  const tabs = [
+    { id: 'profile', name: 'Mon Profil', icon: '👤' },
+    { id: 'calendar', name: 'Calendrier', icon: '📅' },
+    { id: 'students', name: 'Mes Étudiants', icon: '👥' },
+    { id: 'evaluation', name: 'Nouvelle Évaluation', icon: '📝' },
+    { id: 'history', name: 'Historique', icon: '📋' },
+  ];
+
+  // --- Helper pour formater les dates ---
+  const formatDate = (date) => {
+    if (!date) return '—';
+    try {
+      return new Date(date).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return '—';
+    }
+  };
+
+  // --- Rendu du contenu par onglet ---
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'profile':
+        return renderProfileTab();
+      case 'calendar':
+        return renderCalendarTab();
+      case 'students':
+        return renderStudentsTab();
+      case 'student-details':
+        return renderStudentDetailsTab();
+      case 'evaluation':
+        return renderEvaluationTab();
+      case 'history':
+        return renderHistoryTab();
+      default:
+        return null;
+    }
+  };
+
+  // --- Onglet Profil ---
+  const renderProfileTab = () => {
+    return (
+      <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <div className="max-w-3xl mx-auto">
+          {/* En-tête du profil */}
+          <div className="flex items-center space-x-6 mb-8">
+            <div className="flex-shrink-0">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="w-24 h-24 rounded-full object-cover border-4 border-primary-100"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center border-4 border-primary-100">
+                  <span className="text-3xl font-bold text-white">
+                    {avatarLetter}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-gray-900">{displayName}</h2>
+              <p className="text-sm text-gray-500 mt-1">{roleLabel}</p>
+              <p className="text-sm text-gray-600 mt-2">{currentUser?.email}</p>
+            </div>
+          </div>
+
+          {/* Informations du profil */}
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Prénom
+                </label>
+                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
+                  {currentUser?.prenom || currentUser?.firstName || '—'}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom
+                </label>
+                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
+                  {currentUser?.nom || currentUser?.lastName || '—'}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
+              <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
+                {currentUser?.email || '—'}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Téléphone
+              </label>
+              <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
+                {currentUser?.telephone || currentUser?.phone || '—'}
+              </div>
+            </div>
+
+            {currentUser?.specialite && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Spécialité
+                </label>
+                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
+                  {currentUser.specialite}
+                </div>
+              </div>
+            )}
+
+            {currentUser?.departement && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Département
+                </label>
+                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
+                  {currentUser.departement}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bouton Modifier le profil */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => navigate('/profile')}
+              className="w-full sm:w-auto px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+            >
+              Modifier mon profil
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  };
+
+  // --- Onglet Calendrier ---
+  const renderCalendarTab = () => {
+    return (
+      <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              📅 Calendrier
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Consultez vos événements, soutenances et entretiens programmés.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/calendar')}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors text-sm font-medium"
+          >
+            Voir le calendrier complet
+          </button>
+        </div>
+
+        {/* Placeholder pour la vue calendrier simplifiée */}
+        <div className="mt-6 p-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-dashed border-gray-300 text-center">
+          <div className="text-6xl mb-4">📅</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Calendrier des événements
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Gérez vos rendez-vous, soutenances et sessions d'évaluation.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/calendar')}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            Accéder au calendrier
+          </button>
+        </div>
+      </section>
+    );
+  };
+
+  // --- Onglet Mes Étudiants ---
+  const renderStudentsTab = () => {
+    return (
+      <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-900">
+            👥 Mes Étudiants
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Liste des étudiants que vous pouvez évaluer.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="py-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <p className="text-sm text-gray-500 mt-2">Chargement...</p>
+          </div>
+        ) : students.length === 0 ? (
+          <div className="py-12 text-center text-gray-500">
+            <div className="text-5xl mb-4">👥</div>
+            <p className="text-sm">Aucun étudiant disponible pour le moment.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {students.map((student) => (
+              <div
+                key={student._id}
+                className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:shadow-md transition-all cursor-pointer"
+                onClick={() => viewStudentDetails(student)}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                      <span className="text-lg font-bold text-white">
+                        {student.firstName?.charAt(0) || student.nom?.charAt(0) || '?'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {[student.firstName, student.lastName].filter(Boolean).join(' ') || student.nom}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {student.email}
+                    </p>
+                  </div>
+                  <div>
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  };
+
+  // --- Onglet Historique ---
+  const renderHistoryTab = () => {
+    return (
+      <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-900">
+            📋 Historique des évaluations
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Consultez toutes les évaluations que vous avez créées.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="py-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <p className="text-sm text-gray-500 mt-2">Chargement...</p>
+          </div>
+        ) : evaluations.length === 0 ? (
+          <div className="py-12 text-center text-gray-500">
+            <div className="text-5xl mb-4">📋</div>
+            <p className="text-sm">Aucune évaluation pour le moment.</p>
+            <button
+              type="button"
+              onClick={() => setActiveTab('evaluation')}
+              className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
+            >
+              Créer une évaluation
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {evaluations.map((evaluation) => (
+              <div
+                key={evaluation._id}
+                className="p-6 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:shadow-md transition-all"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                        <span className="text-sm font-bold text-white">
+                          {evaluation.etudiantId?.firstName?.charAt(0) || '?'}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold text-gray-900">
+                          {[evaluation.etudiantId?.firstName, evaluation.etudiantId?.lastName]
+                            .filter(Boolean)
+                            .join(' ') || evaluation.etudiantId?.nom || 'Étudiant'}
+                        </h3>
+                        <p className="text-xs text-gray-500">
+                          {evaluation.etudiantId?.email}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                      <div>
+                        <p className="text-xs text-gray-500">Note</p>
+                        <p className="text-lg font-bold text-primary-600">{evaluation.note}/20</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Compétences validées</p>
+                        <p className="text-lg font-bold text-green-600">
+                          {evaluation.competences?.filter(c => c.validee).length || 0}/{evaluation.competences?.length || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Créé le</p>
+                        <p className="text-sm font-medium text-gray-700">
+                          {formatDate(evaluation.createdAt)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Statut</p>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          evaluation.luParEtudiant
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {evaluation.luParEtudiant ? '✓ Lu' : '⏳ Non lu'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                      <p className="text-xs text-gray-500 mb-1">Commentaire</p>
+                      <p className="text-sm text-gray-700 line-clamp-2">
+                        {evaluation.commentaire}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  };
+
+  // --- Onglet Détails d'un étudiant ---
+  const renderStudentDetailsTab = () => {
+    if (!selectedStudentDetails) {
+      return (
+        <div className="py-12 text-center text-gray-500">
+          <p>Aucun étudiant sélectionné</p>
+        </div>
+      );
+    }
+
+    const student = selectedStudentDetails;
+
+    return (
+      <div className="space-y-6">
+        {/* Bouton retour */}
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedStudentDetails(null);
+            setStudentEvaluations([]);
+            setActiveTab('students');
+          }}
+          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+        >
+          <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Retour à la liste
+        </button>
+
+        {/* Profil de l'étudiant */}
+        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                <span className="text-3xl font-bold text-white">
+                  {student.firstName?.charAt(0) || student.nom?.charAt(0) || '?'}
+                </span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {[student.firstName, student.lastName].filter(Boolean).join(' ') || student.nom}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">{student.email}</p>
+                <span className="inline-flex items-center mt-2 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  APPRENTI
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedStudent(student._id);
+                setActiveTab('evaluation');
+              }}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
+            >
+              Créer une évaluation
+            </button>
+          </div>
+        </section>
+
+        {/* Évaluations de l'étudiant */}
+        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">
+              📋 Historique des évaluations
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {studentEvaluations.length} évaluation{studentEvaluations.length > 1 ? 's' : ''} créée{studentEvaluations.length > 1 ? 's' : ''}
+            </p>
+          </div>
+
+          {loading ? (
+            <div className="py-12 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+              <p className="text-sm text-gray-500 mt-2">Chargement...</p>
+            </div>
+          ) : studentEvaluations.length === 0 ? (
+            <div className="py-12 text-center text-gray-500">
+              <div className="text-5xl mb-4">📝</div>
+              <p className="text-sm mb-4">Aucune évaluation pour cet étudiant.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStudent(student._id);
+                  setActiveTab('evaluation');
+                }}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
+              >
+                Créer la première évaluation
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {studentEvaluations.map((evaluation) => (
+                <div
+                  key={evaluation._id}
+                  className="p-6 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:shadow-md transition-all"
+                >
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Note</p>
+                      <p className="text-lg font-bold text-primary-600">{evaluation.note}/20</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Compétences validées</p>
+                      <p className="text-lg font-bold text-green-600">
+                        {evaluation.competences?.filter(c => c.validee).length || 0}/{evaluation.competences?.length || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Créé le</p>
+                      <p className="text-sm font-medium text-gray-700">
+                        {formatDate(evaluation.createdAt)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Statut</p>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        evaluation.luParEtudiant
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {evaluation.luParEtudiant ? '✓ Lu' : '⏳ Non lu'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Compétences évaluées</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {evaluation.competences?.map((comp) => (
+                        <div
+                          key={comp.id}
+                          className={`flex items-center space-x-2 p-2 rounded ${
+                            comp.validee ? 'bg-green-50' : 'bg-gray-50'
+                          }`}
+                        >
+                          <span className={`text-lg ${comp.validee ? 'text-green-600' : 'text-gray-400'}`}>
+                            {comp.validee ? '✓' : '○'}
+                          </span>
+                          <span className={`text-xs ${comp.validee ? 'text-green-900 font-medium' : 'text-gray-600'}`}>
+                            {comp.nom}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-1">Commentaire</p>
+                    <p className="text-sm text-gray-700">
+                      {evaluation.commentaire}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    );
+  };
+
+  // --- Onglet Évaluation ---
+  const renderEvaluationTab = () => {
+    return (
+      <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-900">
+            📝 Créer une évaluation
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Évaluez les compétences de vos étudiants et attribuez des notes.
+          </p>
+        </div>
+
+        {/* Sélection de l'étudiant */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
+            Sélectionner un étudiant
+          </label>
+          {loading ? (
+            <div className="py-2 text-sm text-gray-500">Chargement des étudiants...</div>
+          ) : (
+            <select
+              value={selectedStudent || ''}
+              onChange={(e) => setSelectedStudent(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="">-- Choisir un étudiant --</option>
+              {students.map((student) => (
+                <option key={student._id} value={student._id}>
+                  {[student.firstName, student.lastName].filter(Boolean).join(' ') || student.nom} ({student.email})
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {selectedStudent ? (
+          <EvaluationForm 
+            studentId={selectedStudent}
+            onSuccess={() => {
+              setSelectedStudent(null);
+              setActiveTab('history');
+            }}
+          />
+        ) : (
+          <div className="py-12 text-center text-gray-500">
+            <div className="text-5xl mb-4">👆</div>
+            <p className="text-sm">
+              Veuillez sélectionner un étudiant pour commencer l'évaluation.
+            </p>
+            <button
+              type="button"
+              onClick={() => setActiveTab('students')}
+              className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
+            >
+              Voir la liste des étudiants
+            </button>
+          </div>
+        )}
+      </section>
+    );
+  };
+
+  // --- Layout principal ---
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-gray-900">
+                Dashboard Tuteur
+              </h1>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                {roleLabel}
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              {/* Avatar + nom */}
+              <div className="flex items-center space-x-3">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName}
+                    className="w-10 h-10 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-primary-500"
+                    onClick={() => setActiveTab('profile')}
+                  />
+                ) : (
+                  <div
+                    className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary-500"
+                    onClick={() => setActiveTab('profile')}
+                  >
+                    <span className="text-sm font-semibold text-white">
+                      {avatarLetter}
+                    </span>
+                  </div>
+                )}
+                <span className="text-sm font-medium text-gray-700 hidden sm:block">
+                  {displayName}
+                </span>
+              </div>
+
+              {/* Bouton déconnexion */}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Déconnexion
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation par onglets */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <nav className="flex space-x-2 bg-white rounded-lg shadow-sm border border-gray-200 p-2 mb-6">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-md text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <span className="text-lg">{tab.icon}</span>
+              <span>{tab.name}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* Contenu de l'onglet actif */}
+        <div className="transition-all duration-300">
+          {renderContent()}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Composant Formulaire d'Évaluation ---
+const EvaluationForm = ({ studentId, onSuccess }) => {
+  const [evaluation, setEvaluation] = useState({
+    note: '',
+    commentaire: '',
+    competences: [
+      { id: 1, nom: 'Conception et développement', validee: false },
+      { id: 2, nom: 'Gestion de projet', validee: false },
+      { id: 3, nom: 'Communication professionnelle', validee: false },
+      { id: 4, nom: 'Travail en équipe', validee: false },
+      { id: 5, nom: 'Résolution de problèmes', validee: false },
+      { id: 6, nom: 'Autonomie', validee: false },
+      { id: 7, nom: 'Adaptabilité', validee: false },
+      { id: 8, nom: 'Rigueur et qualité du travail', validee: false },
+    ],
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+
+  const handleCompetenceToggle = (competenceId) => {
+    setEvaluation((prev) => ({
+      ...prev,
+      competences: prev.competences.map((comp) =>
+        comp.id === competenceId
+          ? { ...comp, validee: !comp.validee }
+          : comp
+      ),
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      // Validation
+      if (!evaluation.note || evaluation.note < 0 || evaluation.note > 20) {
+        throw new Error('La note doit être comprise entre 0 et 20.');
+      }
+
+      if (!evaluation.commentaire.trim()) {
+        throw new Error('Le commentaire est obligatoire.');
+      }
+
+      // Appel API pour sauvegarder l'évaluation
+      const evaluationData = {
+        etudiantId: studentId,
+        note: parseFloat(evaluation.note),
+        commentaire: evaluation.commentaire.trim(),
+        competences: evaluation.competences,
+      };
+
+      await evaluationService.createEvaluation(evaluationData);
+
+      setSuccess('Évaluation enregistrée avec succès ! L\'étudiant sera notifié.');
+
+      // Réinitialisation du formulaire après 2 secondes
+      setTimeout(() => {
+        setEvaluation({
+          note: '',
+          commentaire: '',
+          competences: evaluation.competences.map((comp) => ({
+            ...comp,
+            validee: false,
+          })),
+        });
+        setSuccess('');
+        if (onSuccess) {
+          onSuccess();
+        }
+      }, 2000);
+    } catch (err) {
+      console.error('Erreur lors de la soumission:', err);
+      setError(err.message || err.error || 'Erreur lors de l\'enregistrement de l\'évaluation.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Messages de succès/erreur */}
+      {success && (
+        <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <span className="text-green-600 text-xl">✓</span>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-green-800">{success}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <span className="text-red-600 text-xl">⚠</span>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-red-800">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Section Compétences */}
+      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <span className="text-2xl mr-2">🎯</span>
+          Compétences validées
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Cochez les compétences que l'étudiant a acquises durant cette période.
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {evaluation.competences.map((competence) => (
+            <label
+              key={competence.id}
+              className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                competence.validee
+                  ? 'bg-white border-primary-500 shadow-md'
+                  : 'bg-white border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={competence.validee}
+                onChange={() => handleCompetenceToggle(competence.id)}
+                className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              />
+              <span
+                className={`text-sm font-medium ${
+                  competence.validee ? 'text-primary-900' : 'text-gray-700'
+                }`}
+              >
+                {competence.nom}
+              </span>
+              {competence.validee && (
+                <span className="ml-auto text-primary-600 text-lg">✓</span>
+              )}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Note sur 20 */}
+      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-6 border border-blue-200">
+        <label className="flex items-center text-lg font-semibold text-gray-900 mb-4">
+          <span className="text-2xl mr-2">📊</span>
+          Note sur 20
+        </label>
+        <div className="flex items-center space-x-4">
+          <input
+            type="number"
+            min="0"
+            max="20"
+            step="0.5"
+            value={evaluation.note}
+            onChange={(e) =>
+              setEvaluation((prev) => ({ ...prev, note: e.target.value }))
+            }
+            className="w-32 px-4 py-3 text-2xl font-bold text-center border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            placeholder="0"
+            required
+          />
+          <span className="text-2xl font-bold text-gray-400">/ 20</span>
+        </div>
+        <p className="text-sm text-gray-600 mt-2">
+          Saisissez une note entre 0 et 20 (décimales acceptées: 0.5).
+        </p>
+      </div>
+
+      {/* Commentaire */}
+      <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
+        <label className="flex items-center text-lg font-semibold text-gray-900 mb-4">
+          <span className="text-2xl mr-2">💬</span>
+          Commentaire d'évaluation
+        </label>
+        <textarea
+          value={evaluation.commentaire}
+          onChange={(e) =>
+            setEvaluation((prev) => ({
+              ...prev,
+              commentaire: e.target.value,
+            }))
+          }
+          rows="6"
+          className="w-full px-4 py-3 border-2 border-yellow-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+          placeholder="Décrivez les points forts de l'étudiant, les axes d'amélioration, et toute remarque pertinente concernant son travail et son évolution..."
+          required
+        />
+        <p className="text-sm text-gray-600 mt-2">
+          Ce commentaire sera partagé avec l'étudiant.
+        </p>
+      </div>
+
+      {/* Bouton de soumission */}
+      <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+        <button
+          type="button"
+          onClick={() => {
+            setEvaluation({
+              note: '',
+              commentaire: '',
+              competences: evaluation.competences.map((comp) => ({
+                ...comp,
+                validee: false,
+              })),
+            });
+            setError('');
+            setSuccess('');
+          }}
+          className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+        >
+          Réinitialiser
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="px-8 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-medium rounded-lg hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+        >
+          {isSubmitting ? (
+            <>
+              <span className="inline-block animate-spin mr-2">⏳</span>
+              Enregistrement...
+            </>
+          ) : (
+            <>
+              <span className="mr-2">✓</span>
+              Enregistrer l'évaluation
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+};
+
+export default TutorDashboard;

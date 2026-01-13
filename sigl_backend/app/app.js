@@ -15,6 +15,7 @@ const userRoutes = require('./user/routes');
 const authRoutes = require('./auth/auth.routes');
 const entretienRoutes = require('./entretien/entretien.routes');
 const soutenanceRoutes = require('./soutenance/soutenance.routes');
+const evaluationRoutes = require('./evaluation/routes');
 
 // Environment validation
 const requiredEnvVars = [
@@ -157,6 +158,7 @@ app.use('/api/calendar', calendarRoutes);
 app.use('/api/journaux', journalRoutes);
 app.use('/api/entretiens', entretienRoutes);
 app.use('/api/soutenances', soutenanceRoutes);
+app.use('/api/evaluations', evaluationRoutes);
 
 // Apply stricter rate limiting to auth endpoints
 app.use('/api/auth', authLimiter, authRoutes);

@@ -83,7 +83,9 @@ const LoginForm = () => {
         }
 
         // Login sans MFA : tokens déjà stockés
-        navigate('/dashboard');
+        const currentUser = authService.getCurrentUser();
+        const dashboardRoute = currentUser?.role === 'TP' ? '/dashboard/tuteur' : '/dashboard';
+        navigate(dashboardRoute);
       } else {
         // Étape MFA
         if (!mfaCode.trim()) {
@@ -101,7 +103,9 @@ const LoginForm = () => {
           formData.rememberMe
         );
 
-        navigate('/dashboard');
+        const currentUser = authService.getCurrentUser();
+        const dashboardRoute = currentUser?.role === 'TP' ? '/dashboard/tuteur' : '/dashboard';
+        navigate(dashboardRoute);
       }
     } catch (err) {
       console.error('Erreur de connexion :', err);

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import RegisterPage from './pages/RegisterPage';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
+import TutorDashboard from './pages/dashboard/TutorDashboard';
 
 import CreateJournalPage from './pages/journal/CreateJournalPage';
 import JournalDetailPage from './pages/journal/JournalDetailPage';
@@ -28,6 +29,10 @@ function App() {
 
         {/* Espace apprenti */}
         <Route path="/dashboard" element={<StudentDashboard />} />
+        
+        {/* Espace tuteur */}
+        <Route path="/dashboard/tuteur" element={<TutorDashboard />} />
+        
         <Route path="/journal/create" element={<CreateJournalPage />} />
         <Route path="/journal/:id" element={<JournalDetailPage />} />
 

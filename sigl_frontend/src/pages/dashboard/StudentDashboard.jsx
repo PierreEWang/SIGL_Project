@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import authService from '../../services/authService';
 import journalService from '../../services/journalService';
 import bookingService from '../../services/bookingService';
+import evaluationService from '../../services/evaluationService';
 
 /**
  * Dashboard principal de l'apprenti
@@ -22,6 +23,12 @@ const StudentDashboard = () => {
   const [soutenance, setSoutenance] = useState(null);
   const [soutenanceLoading, setSoutenanceLoading] = useState(false);
   const [soutenanceError, setSoutenanceError] = useState(null);
+
+  // State for evaluations
+  const [evaluations, setEvaluations] = useState([]);
+  const [evaluationsLoading, setEvaluationsLoading] = useState(false);
+  const [evaluationsError, setEvaluationsError] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,6 +70,7 @@ const StudentDashboard = () => {
   const tabs = [
     { id: 'journal', name: 'Journal de formation', icon: '📔' },
     { id: 'documents', name: 'Mes documents', icon: '📄' },
+    { id: 'evaluations', name: 'Mes Évaluations', icon: '📊' },
     { id: 'calendar', name: 'Calendrier', icon: '📅' },
     { id: 'entretiens', name: 'Entretiens & Soutenances', icon: '💬' },
     { id: 'notifications', name: 'Notifications', icon: '🔔' },
@@ -139,6 +147,29 @@ const StudentDashboard = () => {
     };
 
     loadSoutenance();
+  }, []);
+
+  // --- Chargement des évaluations pour l'onglet Évaluations ---
+  useEffect(() => {
+    const loadEvaluations = async () => {
+      try {
+        setEvaluationsLoading(true);
+        setEvaluationsError(null);
+        const data = await evaluationService.getMyReceivedEvaluations();
+        setEvaluations(data);
+        
+        // Compter les non lues
+        const count = await evaluationService.getUnreadCount();
+        setUnreadCount(count);
+      } catch (error) {
+        console.error('Erreur lors du chargement des évaluations :', error);
+        setEvaluationsError("Impossible de charger vos évaluations pour le moment.");
+      } finally {
+        setEvaluationsLoading(false);
+      }
+    };
+
+    loadEvaluations();
   }, []);
 
   const formatDate = (value) => {
@@ -311,6 +342,155 @@ const StudentDashboard = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </section>
+        );
+
+      case 'evaluations':
+        return (
+          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  📊 Mes Évaluations
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Consultez les évaluations de vos tuteurs.
+                </p>
+              </div>
+              {unreadCount > 0 && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                  {unreadCount} nouvelle{unreadCount > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+
+            {evaluationsLoading && (
+              <div className="py-6 text-sm text-gray-500">
+                Chargement de vos évaluations...
+              </div>
+            )}
+
+            {evaluationsError && (
+              <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                {evaluationsError}
+              </div>
+            )}
+
+            {!evaluationsLoading && !evaluationsError && evaluations.length === 0 && (
+              <div className="py-10 text-center text-sm text-gray-500">
+                Aucune évaluation reçue pour le moment.
+              </div>
+            )}
+
+            {!evaluationsLoading && !evaluationsError && evaluations.length > 0 && (
+              <div className="space-y-4">
+                {evaluations.map((evaluation) => (
+                  <div
+                    key={evaluation._id}
+                    className={`p-6 border-2 rounded-lg ${
+                      evaluation.luParEtudiant
+                        ? 'border-gray-200'
+                        : 'border-primary-300 bg-primary-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                          <span className="text-lg font-bold text-white">
+                            {evaluation.tuteurId?.firstName?.charAt(0) || '?'}
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="text-base font-semibold text-gray-900">
+                            Évaluation de {[evaluation.tuteurId?.firstName, evaluation.tuteurId?.lastName]
+                              .filter(Boolean)
+                              .join(' ') || 'Tuteur'}
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(evaluation.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                      {!evaluation.luParEtudiant && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-500 text-white">
+                          NOUVEAU
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                        <p className="text-xs text-gray-600 mb-1">Note</p>
+                        <p className="text-3xl font-bold text-blue-600">{evaluation.note}/20</p>
+                      </div>
+                      <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                        <p className="text-xs text-gray-600 mb-1">Compétences validées</p>
+                        <p className="text-3xl font-bold text-green-600">
+                          {evaluation.competences?.filter(c => c.validee).length || 0}/{evaluation.competences?.length || 0}
+                        </p>
+                      </div>
+                      <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                        <p className="text-xs text-gray-600 mb-1">Progression</p>
+                        <p className="text-3xl font-bold text-purple-600">
+                          {Math.round(((evaluation.competences?.filter(c => c.validee).length || 0) / (evaluation.competences?.length || 1)) * 100)}%
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Compétences évaluées</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {evaluation.competences?.map((comp) => (
+                          <div
+                            key={comp.id}
+                            className={`flex items-center space-x-2 p-2 rounded ${
+                              comp.validee ? 'bg-green-50' : 'bg-gray-50'
+                            }`}
+                          >
+                            <span className={`text-lg ${comp.validee ? 'text-green-600' : 'text-gray-400'}`}>
+                              {comp.validee ? '✓' : '○'}
+                            </span>
+                            <span className={`text-xs ${comp.validee ? 'text-green-900 font-medium' : 'text-gray-600'}`}>
+                              {comp.nom}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">💬 Commentaire du tuteur</h4>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                        {evaluation.commentaire}
+                      </p>
+                    </div>
+
+                    {!evaluation.luParEtudiant && (
+                      <div className="mt-4">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await evaluationService.markAsRead(evaluation._id);
+                              // Recharger les évaluations
+                              const data = await evaluationService.getMyReceivedEvaluations();
+                              setEvaluations(data);
+                              const count = await evaluationService.getUnreadCount();
+                              setUnreadCount(count);
+                            } catch (error) {
+                              console.error('Error marking as read:', error);
+                            }
+                          }}
+                          className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
+                        >
+                          Marquer comme lu
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </section>

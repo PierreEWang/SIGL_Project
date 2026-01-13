@@ -14,6 +14,7 @@ const RegisterPage = () => {
     telephone: '',
     password: '',
     confirmPassword: '',
+    role: 'APPRENTI', // Par défaut
     // Champ optionnel
     codePostal: '',
   });
@@ -190,7 +191,7 @@ const RegisterPage = () => {
         username,
         email: formData.email,
         password: formData.password,
-        role: 'APPRENTI',
+        role: formData.role,
         firstName: formData.prenom,
         lastName: formData.nom,
         birthDate: formData.dateNaissance,
@@ -340,6 +341,26 @@ const RegisterPage = () => {
               </h3>
 
               <div className="space-y-4">
+                {/* Sélection du rôle */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Type de compte <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    className="input-field"
+                  >
+                    <option value="APPRENTI">Apprenti / Étudiant</option>
+                    <option value="TP">Tuteur Pédagogique / Enseignant</option>
+                    <option value="MA">Maître d'Apprentissage</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Sélectionnez le type de compte correspondant à votre profil.
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Adresse e-mail <span className="text-red-500">*</span>
