@@ -1,0 +1,33 @@
+meta {
+  name: Demander un entretien
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:3000/api/entretiens
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer TOKEN
+}
+
+body:json {
+  {
+    "objet": "Point semestriel",
+    "debut": "2025-12-20T14:00:00",
+    "fin": "2025-12-20T15:00:00",
+    "participantIds": [
+      "691ed0cc5f7590986191b244",
+      "6964af53ba7f2d8c6fa2afa8"
+    ]
+  }
+}
+
+settings {
+  encodeUrl: false
+  timeout: 0
+}

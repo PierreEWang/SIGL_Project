@@ -20,6 +20,12 @@ import EntretienPage from './pages/entretien/EntretienPage';
 import PlanificationEntretienPage from './pages/entretien/PlanificationEntretienPage';
 import CreerEntretienPage from './pages/entretien/CreerEntretienPage';
 
+import DemandeEntretienPage from './pages/entretien/DemandeEntretienPage';
+import MesEntretiensPage from './pages/entretien/MesEntretiensPage';
+import PlanifierSoutenancePage from './pages/soutenance/PlanifierSoutenancePage';
+import MaSoutenancePage from './pages/soutenance/MaSoutenancePage';
+import GestionSoutenancesPage from './pages/soutenance/GestionSoutenancesPage';
+
 function App() {
   return (
     <BrowserRouter>

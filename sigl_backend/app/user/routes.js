@@ -8,6 +8,7 @@ const {
   adminOnly,
   staffOnly,
 } = require('../middleware/authorize');
+const Utilisateur = require('../common/models/user.model');  // ← Correction ici !
 
 /**
  * Routes Utilisateur avec authentification et autorisation
@@ -23,6 +24,18 @@ router.get(
   staffOnly(),
   userController.listUsers
 );
+
+router.get('/available-contacts', authenticate, async (req, res) => {
+    try {
+        const users = await Utilisateur.find(
+            { role: { $in: ['APPRENTI', 'TP', 'MA', 'PROF', 'CA', 'RC'] } },
+            'nom email role _id'
+        );
+        res.json({ success: true, users });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 // GET /api/users/:id - Obtenir le profil utilisateur (utilisateur lui-même ou admin)
 router.get(

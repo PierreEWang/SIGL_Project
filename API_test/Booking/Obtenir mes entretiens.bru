@@ -1,0 +1,19 @@
+meta {
+  name: Obtenir mes entretiens
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:3000/api/entretiens/mes-entretiens
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer TOKEN
+}
+
+settings {
+  encodeUrl: false
+}
