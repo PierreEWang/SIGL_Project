@@ -1,25 +1,31 @@
 const mongoose = require('mongoose');
 
+// Schéma pour les créneaux horaires
 const creneauSchema = new mongoose.Schema({
-    debut: {
-        type: Date,
-        required: true
-    },
-    fin: {
-        type: Date,
-        required: true,
-        validate: {
-            validator: function(v) {
-                return v > this.debut;
-            },
-            message: 'La fin doit être après le début'
-        }
-    }
+  debut: {
+    type: Date,
+    required: true
+  },
+  fin: {
+    type: Date,
+    required: true
+  },
+  disponibilite: {
+    type: String,
+    enum: ['LIBRE', 'OCCUPÉ', 'RESERVE'],
+    default: 'LIBRE'
+  }
 }, {
-    timestamps: true,
-    collection: 'creneaux'
+  timestamps: true,
+  collection: 'creneaux'
 });
 
-creneauSchema.index({ debut: 1, fin: 1 });
+// Validation: fin > debut
+creneauSchema.pre('save', function(next) {
+  if (this.fin <= this.debut) {
+    throw new Error('La date de fin doit être après la date de début');
+  }
+  next();
+});
 
 module.exports = mongoose.model('Creneau', creneauSchema);

@@ -1,18 +1,46 @@
 const express = require('express');
-const router = express.Router();
 const entretienController = require('./entretien.controller');
-const { authenticate } = require('../middleware/authenticate');
+const { authenticate } = require('../middleware/auth');
 
-// POST /api/entretiens - Demander un entretien
-router.post('/', authenticate, entretienController.demanderEntretien);
+const router = express.Router();
 
-// GET /api/entretiens/mes-entretiens - Obtenir mes entretiens
-router.get('/mes-entretiens', authenticate, entretienController.getMesEntretiens);
+// Toutes les routes nécessitent l'authentification
+router.use(authenticate);
 
-// PUT /api/entretiens/:id/confirmer - Confirmer un entretien
-router.put('/:id/confirmer', authenticate, entretienController.confirmerEntretien);
+/**
+ * POST /api/entretiens
+ * Crée une nouvelle demande d'entretien
+ */
+router.post('/', entretienController.creerEntretien.bind(entretienController));
 
-// PUT /api/entretiens/:id/annuler - Annuler un entretien
-router.put('/:id/annuler', authenticate, entretienController.annulerEntretien);
+/**
+ * GET /api/entretiens/mes-entretiens
+ * Récupère tous les entretiens de l'utilisateur
+ */
+router.get('/mes-entretiens', entretienController.getMesEntretiens.bind(entretienController));
+
+/**
+ * GET /api/entretiens/calendrier
+ * Récupère les entretiens pour affichage calendrier
+ */
+router.get('/calendrier', entretienController.getEntretiensCalendar.bind(entretienController));
+
+/**
+ * GET /api/entretiens/:entretienId
+ * Récupère un entretien spécifique
+ */
+router.get('/:entretienId', entretienController.getEntretien.bind(entretienController));
+
+/**
+ * PUT /api/entretiens/:entretienId/confirmer
+ * Confirme une demande d'entretien
+ */
+router.put('/:entretienId/confirmer', entretienController.confirmerEntretien.bind(entretienController));
+
+/**
+ * PUT /api/entretiens/:entretienId/annuler
+ * Annule un entretien
+ */
+router.put('/:entretienId/annuler', entretienController.annulerEntretien.bind(entretienController));
 
 module.exports = router;

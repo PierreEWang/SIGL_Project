@@ -10,11 +10,16 @@ const cors = require('cors');
 const journalRoutes = require('./journal/routes');
 const app = express();
 const calendarRoutes = require('./calendar/routes');
+const documentRoutes = require('./documents/routes');
 const testRoutes = require('./test/routes');
 const userRoutes = require('./user/routes');
 const authRoutes = require('./auth/auth.routes');
 const entretienRoutes = require('./entretien/entretien.routes');
+<<<<<<< HEAD
+const evaluationRoutes = require('./evaluation/evaluation.routes');
+=======
 const soutenanceRoutes = require('./soutenance/soutenance.routes');
+>>>>>>> origin/main
 
 // Environment validation
 const requiredEnvVars = [
@@ -155,8 +160,14 @@ app.use('/api/test', testRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/journaux', journalRoutes);
+<<<<<<< HEAD
+app.use('/api/documents', documentRoutes);
+app.use('/api/entretiens', entretienRoutes);
+app.use('/api/evaluations', evaluationRoutes);
+=======
 app.use('/api/entretiens', entretienRoutes);
 app.use('/api/soutenances', soutenanceRoutes);
+>>>>>>> origin/main
 
 // Apply stricter rate limiting to auth endpoints
 app.use('/api/auth', authLimiter, authRoutes);

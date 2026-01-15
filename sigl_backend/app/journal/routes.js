@@ -10,5 +10,8 @@ router.use(authenticate, authenticatedUsers());
 
 router.post('/', journalController.createJournal);
 router.get('/', journalController.getMyJournaux);
+router.get('/:id', journalController.getJournalById);
+router.put('/:id', journalController.updateJournal);
+router.delete('/:id', journalController.deleteJournal);
 
 module.exports = router;

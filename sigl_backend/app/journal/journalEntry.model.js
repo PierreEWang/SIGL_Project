@@ -1,31 +1,55 @@
+// sigl_backend/app/journal/journalEntry.model.js
 const mongoose = require('mongoose');
 
 const JournalEntrySchema = new mongoose.Schema(
   {
-    // Référence vers l'utilisateur apprenti
     apprenti: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
 
-    // Date de la note (on utilisera la date de création)
     date: {
       type: Date,
       required: true,
     },
 
-    // Contenu JSON stringifié (structure complète des périodes / missions)
+    // ✅ Compat: accepte Number (ancien), string/ObjectId (futur)
+    // Évite de casser la création si un jour tu stockes un ObjectId.
+    calendarEventId: {
+      type: mongoose.Schema.Types.Mixed,
+      required: false,
+      index: true,
+      default: null,
+    },
+
     contenu: {
       type: String,
       required: true,
       minlength: 1,
       maxlength: 10000,
     },
+
+    // Historique des modifications
+    history: [{
+      timestamp: {
+        type: Date,
+        default: Date.now,
+      },
+      contenu: {
+        type: String,
+        required: true,
+      },
+      modifiedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+      },
+    }],
   },
   {
     timestamps: true,
-    collection: 'journal_entries', // colle à ta metadata existante
+    collection: 'journal_entries',
   }
 );
 

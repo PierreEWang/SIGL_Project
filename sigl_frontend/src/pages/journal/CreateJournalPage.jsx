@@ -12,6 +12,8 @@ const CreateJournalPage = () => {
       titre: '',
       dateDebut: '',
       dateFin: '',
+      startTime: '',
+      durationHours: '',
       missions: [
         {
           id: 1,
@@ -23,7 +25,7 @@ const CreateJournalPage = () => {
     },
   ]);
 
-  // ---------- STATE ÉVÉNEMENT CALENDRIER (Option A) ----------
+  // ---------- STATE ÉVÉNEMENT CALENDRIER ----------
   const [calendarEvent, setCalendarEvent] = useState({
     enable: false,
     title: '',
@@ -38,21 +40,13 @@ const CreateJournalPage = () => {
   const [error, setError] = useState(null);
 
   // ---------- HELPERS JOURNAL ----------
-
   const handlePeriodeChange = (periodeIndex, field, value) => {
     setPeriodes((prev) =>
-      prev.map((p, index) =>
-        index === periodeIndex ? { ...p, [field]: value } : p
-      )
+      prev.map((p, index) => (index === periodeIndex ? { ...p, [field]: value } : p))
     );
   };
 
-  const handleMissionChange = (
-    periodeIndex,
-    missionIndex,
-    field,
-    value
-  ) => {
+  const handleMissionChange = (periodeIndex, missionIndex, field, value) => {
     setPeriodes((prev) =>
       prev.map((p, pIndex) => {
         if (pIndex !== periodeIndex) return p;
@@ -88,7 +82,7 @@ const CreateJournalPage = () => {
 
   const removePeriode = (periodeIndex) => {
     setPeriodes((prev) => {
-      if (prev.length === 1) return prev; // on garde au moins une période
+      if (prev.length === 1) return prev;
       return prev.filter((_, index) => index !== periodeIndex);
     });
   };
@@ -117,9 +111,6 @@ const CreateJournalPage = () => {
     setPeriodes((prev) =>
       prev.map((p, pIndex) => {
         if (pIndex !== periodeIndex) return p;
-
-        // On ne supprime que les missions ajoutées (index > 0) pour
-        // respecter ton "retirer celles ajoutées en plus de la première"
         if (missionIndex === 0) return p;
         if (p.missions.length <= 1) return p;
 
@@ -144,6 +135,9 @@ const CreateJournalPage = () => {
 
         return {
           ...p,
+          // conservez aussi startTime et durationHours si présents
+          startTime: p.startTime || '',
+          durationHours: p.durationHours || '',
           missions: cleanMissions,
         };
       })
@@ -156,7 +150,6 @@ const CreateJournalPage = () => {
   };
 
   // ---------- SUBMIT ----------
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -166,273 +159,264 @@ const CreateJournalPage = () => {
       const cleanedPeriodes = sanitizePeriodes(periodes);
 
       if (!cleanedPeriodes.length) {
-        setError(
-          'Veuillez renseigner au moins une période ou une mission avant de sauvegarder.'
-        );
+        setError('Veuillez renseigner au moins une période ou une mission avant de sauvegarder.');
         setIsSubmitting(false);
         return;
       }
 
-      // Construction éventuelle de l’évènement de calendrier (Option A)
-      let calendarEventPayload = null;
-      if (
-        calendarEvent.enable &&
-        calendarEvent.title.trim() &&
-        calendarEvent.date
-      ) {
-        calendarEventPayload = {
-          title: calendarEvent.title.trim(),
-          date: calendarEvent.date,
-          time: calendarEvent.time || null,
-          location: calendarEvent.location || null,
-          participantsRaw: calendarEvent.participants || '',
-          notes: calendarEvent.notes || '',
-        };
-      }
-
       const payload = {
         periodes: cleanedPeriodes,
-        status: 'EN_COURS',
-        createdAt: new Date().toISOString(),
-        calendarEvent: calendarEventPayload,
+        calendarEvent: calendarEvent.enable ? calendarEvent : null,
       };
 
-      await journalService.createJournal(payload);
+      const created = await journalService.createJournal(payload);
 
-      navigate('/dashboard?tab=journal');
+      // Si ton backend retourne { journal: {...} } ou direct {...}
+      const createdId = created?.journal?._id || created?._id || created?.id;
+
+      if (createdId) navigate(`/journal/${createdId}`);
+      else navigate('/dashboard');
     } catch (err) {
       console.error(err);
-      setError("Erreur lors de l'enregistrement du journal.");
-    } finally {
+      setError(err?.message || err?.error || 'Erreur lors de la création du journal');
       setIsSubmitting(false);
     }
   };
 
-  // ---------- Rendu ----------
-
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Lien retour tableau de bord */}
-      <div className="mb-4">
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard?tab=journal')}
-          className="inline-flex items-center text-sm text-primary-600 hover:text-primary-800"
-        >
-          ← Retour au tableau de bord
-        </button>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xl">I</span>
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">Créer un journal</h1>
+              <p className="text-xs text-gray-500">Journal de formation</p>
+            </div>
+          </div>
 
-      <h1 className="text-2xl font-semibold mb-6">Créer une note mensuelle</h1>
-
-      {error && (
-        <div className="mb-4 text-red-600 text-sm bg-red-50 border border-red-200 px-4 py-2 rounded">
-          {error}
+          <Link to="/dashboard" className="text-sm text-gray-600 hover:text-gray-900">
+            Retour dashboard
+          </Link>
         </div>
-      )}
+      </header>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {periodes.map((periode, pIndex) => (
-          <div
-            key={periode.id}
-            className="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4"
-          >
-            <div className="flex justify-between items-center">
-              <div>
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && (
+          <div className="mb-6 rounded-md bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Périodes */}
+          {periodes.map((periode, pIndex) => (
+            <div key={periode.id} className="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4">
+              <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-800">
                   Période {pIndex + 1}
                 </h2>
-                <span className="text-xs text-gray-500">
-                  {periode.dateDebut && periode.dateFin
-                    ? `${periode.dateDebut} → ${periode.dateFin}`
-                    : 'Dates non renseignées'}
-                </span>
+                {pIndex > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => removePeriode(pIndex)}
+                    className="text-sm text-red-600 hover:text-red-800"
+                  >
+                    Supprimer la période
+                  </button>
+                )}
               </div>
 
-              {periodes.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removePeriode(pIndex)}
-                  className="text-xs text-red-600 hover:text-red-800"
-                >
-                  Supprimer la période
-                </button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Intitulé de la période
-                </label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="Ex : Missions de novembre"
-                  value={periode.titre}
-                  onChange={(e) =>
-                    handlePeriodeChange(pIndex, 'titre', e.target.value)
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date de début
-                </label>
-                <input
-                  type="date"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  value={periode.dateDebut}
-                  onChange={(e) =>
-                    handlePeriodeChange(pIndex, 'dateDebut', e.target.value)
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date de fin
-                </label>
-                <input
-                  type="date"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  value={periode.dateFin}
-                  onChange={(e) =>
-                    handlePeriodeChange(pIndex, 'dateFin', e.target.value)
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {periode.missions.map((mission, mIndex) => (
-                <div
-                  key={mission.id}
-                  className="border border-gray-200 rounded-md p-4 space-y-3"
-                >
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-sm font-semibold text-gray-700">
-                      Mission {mIndex + 1}
-                    </h3>
-
-                    {/* On autorise la suppression pour les missions ajoutées (index > 0) */}
-                    {mIndex > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => removeMission(pIndex, mIndex)}
-                        className="text-xs text-red-600 hover:text-red-800"
-                      >
-                        Supprimer la mission
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Intitulé de la mission
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        placeholder="Ex : Développement d'une API REST"
-                        value={mission.titre}
-                        onChange={(e) =>
-                          handleMissionChange(
-                            pIndex,
-                            mIndex,
-                            'titre',
-                            e.target.value
-                          )
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Compétences mobilisées
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        placeholder="Ex : C#, travail en équipe."
-                        value={mission.competences}
-                        onChange={(e) =>
-                          handleMissionChange(
-                            pIndex,
-                            mIndex,
-                            'competences',
-                            e.target.value
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Description de la mission
-                    </label>
-                    <textarea
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      rows={3}
-                      placeholder="Décrivez ce que vous avez réalisé, les outils utilisés, les résultats."
-                      value={mission.description}
-                      onChange={(e) =>
-                        handleMissionChange(
-                          pIndex,
-                          mIndex,
-                          'description',
-                          e.target.value
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => addMission(pIndex)}
-                className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100"
-              >
-                + Ajouter une mission
-              </button>
-            </div>
-          </div>
-        ))}
-
-        {/* ---------- SECTION ÉVÉNEMENT CALENDRIER (Option A) ---------- */}
-        <div className="bg-white rounded-lg shadow border border-primary-100 p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-800">
-              Lier un événement de calendrier (optionnel)
-            </h2>
-            <label className="inline-flex items-center space-x-2 text-sm">
-              <input
-                type="checkbox"
-                className="rounded border-gray-300"
-                checked={calendarEvent.enable}
-                onChange={(e) =>
-                  setCalendarEvent((prev) => ({
-                    ...prev,
-                    enable: e.target.checked,
-                  }))
-                }
-              />
-              <span>Créer un événement lié à ce journal</span>
-            </label>
-          </div>
-
-          {calendarEvent.enable && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Titre de l&apos;événement
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-1">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Titre
                   </label>
                   <input
                     type="text"
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder='Ex : Entretien semestriel'
+                    value={periode.titre}
+                    onChange={(e) => handlePeriodeChange(pIndex, 'titre', e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Date début
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    value={periode.dateDebut}
+                    onChange={(e) => handlePeriodeChange(pIndex, 'dateDebut', e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Date fin
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    value={periode.dateFin}
+                    onChange={(e) => handlePeriodeChange(pIndex, 'dateFin', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Heure début</label>
+                  <input
+                    type="time"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    value={periode.startTime || ''}
+                    onChange={(e) => handlePeriodeChange(pIndex, 'startTime', e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Durée (heures)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.25"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    value={periode.durationHours || ''}
+                    onChange={(e) => handlePeriodeChange(pIndex, 'durationHours', e.target.value)}
+                  />
+                </div>
+
+                <div />
+              </div>
+
+              {/* Missions */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700">Missions</h3>
+
+                {(periode.missions || []).map((mission, mIndex) => (
+                  <div key={mission.id} className="border border-gray-200 rounded-md p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-semibold text-gray-700">
+                        Mission {mIndex + 1}
+                      </h4>
+
+                      {mIndex > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => removeMission(pIndex, mIndex)}
+                          className="text-xs text-red-600 hover:text-red-800"
+                        >
+                          Supprimer la mission
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Intitulé
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          value={mission.titre}
+                          onChange={(e) => handleMissionChange(pIndex, mIndex, 'titre', e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Compétences
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          value={mission.competences}
+                          onChange={(e) => handleMissionChange(pIndex, mIndex, 'competences', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Description
+                      </label>
+                      <textarea
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        rows={3}
+                        value={mission.description}
+                        onChange={(e) => handleMissionChange(pIndex, mIndex, 'description', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => addMission(pIndex)}
+                  className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100"
+                >
+                  + Ajouter une mission
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addPeriode}
+            className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800"
+          >
+            + Ajouter une période
+          </button>
+
+          {/* Événement calendrier optionnel */}
+          <div className="bg-white rounded-lg shadow border border-primary-100 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-800">
+                Lier un événement de calendrier (optionnel)
+              </h2>
+              <label className="inline-flex items-center space-x-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={calendarEvent.enable}
+                  onChange={(e) => {
+                    const enable = e.target.checked;
+                    if (enable) {
+                      // pré-remplir depuis la 1ère période si disponible
+                      const p = periodes?.[0] || {};
+                      setCalendarEvent((prev) => ({
+                        ...prev,
+                        enable: true,
+                        title: prev.title || p.titre || 'Journal de formation',
+                        date: prev.date || p.dateDebut || '',
+                        time: prev.time || p.startTime || '',
+                        notes:
+                          prev.notes || (p.durationHours ? `Durée : ${p.durationHours}h` : prev.notes) || '',
+                      }));
+                    } else {
+                      setCalendarEvent((prev) => ({ ...prev, enable: false }));
+                    }
+                  }}
+                />
+                <span>Créer un événement lié</span>
+              </label>
+            </div>
+
+            {calendarEvent.enable && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titre
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                     value={calendarEvent.title}
                     onChange={(e) =>
                       setCalendarEvent((prev) => ({
@@ -442,6 +426,7 @@ const CreateJournalPage = () => {
                     }
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Date
@@ -458,9 +443,7 @@ const CreateJournalPage = () => {
                     }
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Heure
@@ -477,6 +460,7 @@ const CreateJournalPage = () => {
                     }
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Lieu
@@ -484,7 +468,6 @@ const CreateJournalPage = () => {
                   <input
                     type="text"
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Ex : ESEO Angers, Salle de soutenance 2"
                     value={calendarEvent.location}
                     onChange={(e) =>
                       setCalendarEvent((prev) => ({
@@ -494,76 +477,38 @@ const CreateJournalPage = () => {
                     }
                   />
                 </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes
+                  </label>
+                  <textarea
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    rows={3}
+                    value={calendarEvent.notes}
+                    onChange={(e) =>
+                      setCalendarEvent((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
               </div>
+            )}
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Participants (emails séparés par des virgules)
-                </label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="Ex : tuteur@eseo.fr, maitre.entreprise@boite.com, jury@eseo.fr"
-                  value={calendarEvent.participants}
-                  onChange={(e) =>
-                    setCalendarEvent((prev) => ({
-                      ...prev,
-                      participants: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes / ordre du jour (optionnel)
-                </label>
-                <textarea
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  rows={3}
-                  placeholder="Ex : Préparer le bilan semestriel, les objectifs à venir, etc."
-                  value={calendarEvent.notes}
-                  onChange={(e) =>
-                    setCalendarEvent((prev) => ({
-                      ...prev,
-                      notes: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Boutons bas de page */}
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={addPeriode}
-            className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
-          >
-            + Ajouter une période
-          </button>
-
-          <div className="space-x-3">
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard?tab=journal')}
-              className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              Annuler
-            </button>
-
+          <div className="flex justify-end">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center px-6 py-3 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-60"
+              className="inline-flex items-center px-5 py-2 rounded-md text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
             >
-              {isSubmitting ? 'Enregistrement...' : 'Enregistrer le journal'}
+              {isSubmitting ? 'Création...' : 'Créer le journal'}
             </button>
           </div>
-        </div>
-      </form>
+        </form>
+      </main>
     </div>
   );
 };

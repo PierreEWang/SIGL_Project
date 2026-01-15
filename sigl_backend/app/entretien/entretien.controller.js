@@ -1,71 +1,161 @@
 const entretienService = require('./entretien.service');
 
-const demanderEntretien = async (req, res) => {
+class EntretienController {
+  /**
+   * Crée une demande d'entretien
+   */
+  async creerEntretien(req, res) {
     try {
-        const { objet, debut, fin, participantIds } = req.body;
+      const userId = req.user?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Utilisateur non authentifié'
+        });
+      }
 
-        if (!objet || !debut || !fin || !participantIds || participantIds.length < 2) {
-            return res.status(400).json({
-                success: false,
-                error: 'Données manquantes: objet, debut, fin et au moins 2 participants requis'
-            });
-        }
+      const { objet, debut, fin, participants } = req.body;
 
-        const result = await entretienService.demanderEntretien(objet, debut, fin, participantIds);
+      if (!objet || !debut || !fin || !participants) {
+        return res.status(400).json({
+          success: false,
+          error: 'Champs requis: objet, debut, fin, participants'
+        });
+      }
 
-        if (result.success) {
-            res.status(201).json(result);
-        } else {
-            res.status(400).json(result);
-        }
+      const entretien = await entretienService.demanderEntretien(
+        userId,
+        objet,
+        debut,
+        fin,
+        participants
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: 'Entretien créé avec succès',
+        data: entretien
+      });
     } catch (error) {
-        res.status(500).json({ success: false, error: 'Erreur serveur' });
+      console.error('Erreur création entretien:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
     }
-};
+  }
 
-const confirmerEntretien = async (req, res) => {
+  /**
+   * Récupère les entretiens de l'utilisateur
+   */
+  async getMesEntretiens(req, res) {
     try {
-        const { id } = req.params;
-        const result = await entretienService.confirmerEntretien(id);
+      const userId = req.user.userId;
+      const entretiens = await entretienService.getEntretiensUtilisateur(userId);
 
-        if (result.success) {
-            res.status(200).json(result);
-        } else {
-            res.status(404).json(result);
-        }
+      return res.json({
+        success: true,
+        data: entretiens
+      });
     } catch (error) {
-        res.status(500).json({ success: false, error: 'Erreur serveur' });
+      console.error('Erreur récupération entretiens:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
     }
-};
+  }
 
-const annulerEntretien = async (req, res) => {
+  /**
+   * Récupère un entretien spécifique
+   */
+  async getEntretien(req, res) {
     try {
-        const { id } = req.params;
-        const result = await entretienService.annulerEntretien(id);
+      const { entretienId } = req.params;
+      const entretien = await entretienService.getEntretien(entretienId);
 
-        if (result.success) {
-            res.status(200).json(result);
-        } else {
-            res.status(404).json(result);
-        }
+      return res.json({
+        success: true,
+        data: entretien
+      });
     } catch (error) {
-        res.status(500).json({ success: false, error: 'Erreur serveur' });
+      console.error('Erreur récupération entretien:', error);
+      return res.status(404).json({
+        success: false,
+        error: error.message
+      });
     }
-};
+  }
 
-const getMesEntretiens = async (req, res) => {
+  /**
+   * Confirme une demande d'entretien
+   */
+  async confirmerEntretien(req, res) {
     try {
-        const userId = req.user.userId;
-        const result = await entretienService.getEntretiensUtilisateur(userId);
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(500).json({ success: false, error: 'Erreur serveur' });
-    }
-};
+      const { entretienId } = req.params;
+      const userId = req.user.userId;
 
-module.exports = {
-    demanderEntretien,
-    confirmerEntretien,
-    annulerEntretien,
-    getMesEntretiens
-};
+      const entretien = await entretienService.confirmerEntretien(entretienId, userId);
+
+      return res.json({
+        success: true,
+        message: 'Entretien confirmé',
+        data: entretien
+      });
+    } catch (error) {
+      console.error('Erreur confirmation:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Annule un entretien
+   */
+  async annulerEntretien(req, res) {
+    try {
+      const { entretienId } = req.params;
+      const userId = req.user.userId;
+
+      const entretien = await entretienService.annulerEntretien(entretienId, userId);
+
+      return res.json({
+        success: true,
+        message: 'Entretien annulé',
+        data: entretien
+      });
+    } catch (error) {
+      console.error('Erreur annulation:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Récupère les entretiens pour le calendrier
+   */
+  async getEntretiensCalendar(req, res) {
+    try {
+      const userId = req.user.userId;
+      const entretiens = await entretienService.getEntretiensForCalendar(userId);
+
+      return res.json({
+        success: true,
+        data: entretiens
+      });
+    } catch (error) {
+      console.error('Erreur calendrier:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+}
+
+module.exports = new EntretienController();

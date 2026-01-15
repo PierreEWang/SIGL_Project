@@ -1,101 +1,195 @@
 const entretienRepository = require('./entretien.repository');
+const userRepository = require('../user/repository');
 
-// Pour intégration future avec notifications
-const notifyParticipants = async (entretien, message) => {
-    // TODO: Implémenter quand le système de notifications sera prêt
-    // Créer une notification pour chaque participant
-    console.log(`📧 Notification à envoyer: ${message}`);
-    console.log(`   Participants: ${entretien.participants.map(p => p.email || p).join(', ')}`);
-};
-
-const demanderEntretien = async (objet, debut, fin, participantIds) => {
-    try {
-        // Créer le créneau
-        const creneau = await entretienRepository.createCreneau(new Date(debut), new Date(fin));
-
-        // Créer l'entretien
-        const entretien = await entretienRepository.createEntretien({
-            objet,
-            creneau: creneau._id,
-            participants: participantIds,
-            statut: 'DEMANDE'
-        });
-
-        const populatedEntretien = await entretienRepository.findEntretienById(entretien._id);
-
-        // Notifier les participants (préparation pour système de notifications)
-        await notifyParticipants(populatedEntretien, `Nouvelle demande d'entretien: ${objet}`);
-
-        return { success: true, data: populatedEntretien };
-    } catch (error) {
-        console.error('Erreur création entretien:', error);
-        return { success: false, error: error.message };
+class EntretienService {
+  /**
+   * Crée une demande d'entretien
+   * @param userId - ID de l'utilisateur créateur
+   * @param objet - Objet de l'entretien
+   * @param debut - Date/heure de début
+   * @param fin - Date/heure de fin
+   * @param participants - Array d'emails ou d'IDs des participants
+   */
+  async demanderEntretien(userId, objet, debut, fin, participants) {
+    // Validation robuste
+    if (!userId) {
+      throw new Error('UserId est requis');
     }
-};
 
-const confirmerEntretien = async (entretienId) => {
-    try {
-        const entretien = await entretienRepository.updateEntretienStatut(entretienId, 'CONFIRME');
-        if (!entretien) {
-            return { success: false, error: 'Entretien non trouvé' };
+    if (!objet || !debut || !fin || !participants) {
+      throw new Error('Données invalides pour créer un entretien');
+    }
+
+    if (new Date(fin) <= new Date(debut)) {
+      throw new Error('La date de fin doit être après la date de début');
+    }
+
+    // Convertir les emails en IDs
+    let participantIds = [];
+    
+    for (const participant of participants) {
+      if (!participant) {
+        continue; // Ignorer les valeurs vides
+      }
+
+      let participantId = null;
+      
+      // Si c'est un email (contient @), chercher l'utilisateur
+      if (typeof participant === 'string' && participant.includes('@')) {
+        const user = await userRepository.findUserByEmail(participant);
+        if (!user) {
+          throw new Error(`Utilisateur avec email ${participant} non trouvé`);
         }
-        await notifyParticipants(entretien, `Entretien confirmé: ${entretien.objet}`);
-        return { success: true, data: entretien };
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-};
+        participantId = user._id;
+      } else if (typeof participant === 'string') {
+        // C'est probablement un ID, vérifier qu'il est valide
+        participantId = participant;
+      } else {
+        // C'est déjà un ObjectID Mongoose
+        participantId = participant;
+      }
 
-const annulerEntretien = async (entretienId) => {
-    try {
-        const entretien = await entretienRepository.updateEntretienStatut(entretienId, 'ANNULE');
-        if (!entretien) {
-            return { success: false, error: 'Entretien non trouvé' };
-        }
-        await notifyParticipants(entretien, `Entretien annulé: ${entretien.objet}`);
-        return { success: true, data: entretien };
-    } catch (error) {
-        return { success: false, error: error.message };
+      if (participantId) {
+        participantIds.push(participantId);
+      }
     }
-};
 
-const getEntretiensUtilisateur = async (userId) => {
-    try {
-        const entretiens = await entretienRepository.findEntretiensByParticipant(userId);
-        return { success: true, data: entretiens };
-    } catch (error) {
-        return { success: false, error: error.message };
+    // S'assurer que le créateur est dans la liste des participants
+    const userIdStr = userId.toString();
+    const isDuplicateCreator = participantIds.some(p => {
+      if (!p) return false;
+      const pStr = p.toString();
+      return pStr === userIdStr;
+    });
+    
+    if (!isDuplicateCreator) {
+      participantIds.push(userId);
     }
-};
 
-// Pour intégration future avec le calendrier
-const getEntretiensForCalendar = async (userId, year, month) => {
-    try {
-        const entretiens = await entretienRepository.findEntretiensByParticipant(userId);
-        // Filtrer par mois/année pour affichage calendrier
-        const filtered = entretiens.filter(e => {
-            const date = new Date(e.creneau.debut);
-            return date.getFullYear() === year && date.getMonth() + 1 === month;
-        });
-        // Transformer en format calendrier
-        return filtered.map(e => ({
-            id: `entretien-${e._id}`,
-            title: e.objet,
-            date: e.creneau.debut.toISOString().split('T')[0],
-            time: e.creneau.debut.toTimeString().slice(0, 5),
-            category: 'rendez-vous',
-            location: 'À définir',
-            description: `Participants: ${e.participants.map(p => p.nom).join(', ')}`
-        }));
-    } catch (error) {
-        return [];
+    // Vérifier au moins 2 participants
+    if (participantIds.length < 2) {
+      throw new Error('Au moins 2 participants sont requis');
     }
-};
 
-module.exports = {
-    demanderEntretien,
-    confirmerEntretien,
-    annulerEntretien,
-    getEntretiensUtilisateur,
-    getEntretiensForCalendar
-};
+    // Créer le tableau de confirmations (tous initialisés à false sauf le créateur)
+    const confirmations = participantIds.map(pId => ({
+      participant: pId,
+      confirme: pId.toString() === userIdStr,
+      dateConfirmation: pId.toString() === userIdStr ? new Date() : null
+    }));
+
+    const entretienData = {
+      objet,
+      participants: participantIds,
+      confirmations,
+      creePar: userId,
+      statut: 'DEMANDE'
+    };
+
+    const creneauData = {
+      debut: new Date(debut),
+      fin: new Date(fin),
+      disponibilite: 'RESERVE'
+    };
+
+    return await entretienRepository.createWithCreneau(entretienData, creneauData);
+  }
+
+  /**
+   * Confirme une demande d'entretien
+   */
+  async confirmerEntretien(entretienId, utilisateurId) {
+    const entretien = await entretienRepository.findById(entretienId);
+    
+    if (!entretien) {
+      throw new Error('Entretien non trouvé');
+    }
+
+    if (entretien.statut !== 'DEMANDE') {
+      throw new Error('Seule une demande peut être confirmée');
+    }
+
+    // Vérifier que l'utilisateur est participant
+    const isParticipant = entretien.participants.some(p => p._id.toString() === utilisateurId.toString());
+    if (!isParticipant) {
+      throw new Error('Vous n\'êtes pas participant à cet entretien');
+    }
+
+    // Marquer ce participant comme confirmé
+    const userIdStr = utilisateurId.toString();
+    const confirmationIndex = entretien.confirmations.findIndex(
+      c => c.participant._id.toString() === userIdStr
+    );
+
+    if (confirmationIndex >= 0) {
+      entretien.confirmations[confirmationIndex].confirme = true;
+      entretien.confirmations[confirmationIndex].dateConfirmation = new Date();
+    }
+
+    // Vérifier si TOUS les participants ont confirmé
+    const tousConfirmes = entretien.confirmations.every(c => c.confirme);
+    
+    if (tousConfirmes) {
+      entretien.statut = 'CONFIRME';
+    }
+
+    return await entretienRepository.updateStatut(entretienId, tousConfirmes ? 'CONFIRME' : 'DEMANDE', entretien.confirmations);
+  }
+
+  /**
+   * Annule un entretien
+   */
+  async annulerEntretien(entretienId, utilisateurId) {
+    const entretien = await entretienRepository.findById(entretienId);
+    
+    if (!entretien) {
+      throw new Error('Entretien non trouvé');
+    }
+
+    if (entretien.statut === 'ANNULE') {
+      throw new Error('Entretien déjà annulé');
+    }
+
+    // Vérifier que l'utilisateur est participant
+    const isParticipant = entretien.participants.some(p => p._id.toString() === utilisateurId.toString());
+    if (!isParticipant) {
+      throw new Error('Vous n\'êtes pas participant à cet entretien');
+    }
+
+    return await entretienRepository.updateStatut(entretienId, 'ANNULE');
+  }
+
+  /**
+   * Récupère les entretiens de l'utilisateur
+   */
+  async getEntretiensUtilisateur(userId) {
+    return await entretienRepository.findByParticipant(userId);
+  }
+
+  /**
+   * Récupère un entretien spécifique
+   */
+  async getEntretien(entretienId) {
+    const entretien = await entretienRepository.findById(entretienId);
+    if (!entretien) {
+      throw new Error('Entretien non trouvé');
+    }
+    return entretien;
+  }
+
+  /**
+   * Récupère les entretiens pour le calendrier
+   */
+  async getEntretiensForCalendar(userId) {
+    return await entretienRepository.findForCalendar(userId);
+  }
+
+  /**
+   * Marque un entretien comme terminé
+   */
+  async terminerEntretien(entretienId) {
+    return await entretienRepository.updateStatut(entretienId, 'TERMINE');
+  }
+}
+
+module.exports = new EntretienService();

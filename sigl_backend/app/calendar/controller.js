@@ -1,190 +1,284 @@
 const events = require('./data');
+const calendarService = require('./service');
+
+// ============================================
+// FONCTIONS PUBLIQUES (événements hardcodés)
+// ============================================
 
 /**
- * Contrôleur pour les événements du calendrier
- * Gère la logique métier pour l'API calendrier
- */
-
-/**
- * GET /api/calendar/events
- * Récupère tous les événements du calendrier
+ * Récupère tous les événements hardcodés
  */
 const getAllEvents = (req, res) => {
-    try {
-        console.log(`📅 Récupération de tous les événements - IP: ${req.ip}`);
-        
-        // Optionnel: filtrage par catégorie si fourni en query parameter
-        const { category } = req.query;
-        
-        let filteredEvents = events;
-        
-        if (category) {
-            filteredEvents = events.filter(event => 
-                event.category.toLowerCase() === category.toLowerCase()
-            );
-            console.log(`🔍 Filtrage par catégorie: ${category} - ${filteredEvents.length} événements trouvés`);
-        }
-        
-        // Tri par date croissante
-        filteredEvents.sort((a, b) => {
-            const dateA = new Date(`${a.date}T${a.time}`);
-            const dateB = new Date(`${b.date}T${b.time}`);
-            return dateA - dateB;
-        });
-        
-        res.status(200).json({
-            success: true,
-            message: 'Événements récupérés avec succès',
-            count: filteredEvents.length,
-            data: filteredEvents
-        });
-        
-    } catch (error) {
-        console.error('❌ Erreur lors de la récupération des événements:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur interne du serveur',
-            message: 'Impossible de récupérer les événements'
-        });
+  try {
+    console.log('Récupération de tous les événements - IP:', req.ip);
+    
+    const { category } = req.query;
+    let filteredEvents = events;
+
+    if (category) {
+      filteredEvents = events.filter(
+        (event) => event.category.toLowerCase() === category.toLowerCase()
+      );
+      console.log(`Filtrage par catégorie ${category} - ${filteredEvents.length} événements trouvés`);
     }
+
+    // Tri par date
+    filteredEvents.sort((a, b) => {
+      const dateA = new Date(`${a.date}T${a.time}`);
+      const dateB = new Date(`${b.date}T${b.time}`);
+      return dateA - dateB;
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Événements récupérés avec succès',
+      count: filteredEvents.length,
+      data: filteredEvents,
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des événements:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur interne du serveur',
+      message: 'Impossible de récupérer les événements',
+    });
+  }
 };
 
 /**
- * GET /api/calendar/events/:id
- * Récupère un événement spécifique par son ID
+ * Récupère un événement hardcodé par son ID
  */
 const getEventById = (req, res) => {
-    try {
-        const eventId = parseInt(req.params.id);
-        
-        console.log(`📅 Récupération événement ID: ${eventId} - IP: ${req.ip}`);
-        
-        // Validation de l'ID
-        if (isNaN(eventId) || eventId <= 0) {
-            return res.status(400).json({
-                success: false,
-                error: 'ID invalide',
-                message: 'L\'ID de l\'événement doit être un nombre positif'
-            });
-        }
-        
-        // Recherche de l'événement
-        const event = events.find(e => e.id === eventId);
-        
-        if (!event) {
-            console.log(`🔍 Événement non trouvé - ID: ${eventId}`);
-            return res.status(404).json({
-                success: false,
-                error: 'Événement non trouvé',
-                message: `Aucun événement trouvé avec l'ID ${eventId}`
-            });
-        }
-        
-        console.log(`✅ Événement trouvé: ${event.title}`);
-        res.status(200).json({
-            success: true,
-            message: 'Événement récupéré avec succès',
-            data: event
-        });
-        
-    } catch (error) {
-        console.error('❌ Erreur lors de la récupération de l\'événement:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur interne du serveur',
-            message: 'Impossible de récupérer l\'événement'
-        });
+  try {
+    const { id } = req.params;
+    const event = events.find((e) => e.id === parseInt(id));
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        error: 'Événement non trouvé',
+        message: `Aucun événement trouvé avec l'ID ${id}`,
+      });
     }
+
+    res.status(200).json({
+      success: true,
+      data: event,
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'événement:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur interne du serveur',
+      message: 'Impossible de récupérer l\'événement',
+    });
+  }
 };
 
 /**
- * GET /api/calendar/categories
- * Récupère toutes les catégories d'événements disponibles
+ * Récupère toutes les catégories disponibles
  */
 const getCategories = (req, res) => {
-    try {
-        console.log(`📋 Récupération des catégories - IP: ${req.ip}`);
-        
-        // Extraction des catégories uniques
-        const categories = [...new Set(events.map(event => event.category))];
-        
-        res.status(200).json({
-            success: true,
-            message: 'Catégories récupérées avec succès',
-            count: categories.length,
-            data: categories
-        });
-        
-    } catch (error) {
-        console.error('❌ Erreur lors de la récupération des catégories:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur interne du serveur',
-            message: 'Impossible de récupérer les catégories'
-        });
-    }
+  try {
+    const categories = ['réunion', 'rendez-vous', 'culturel', 'formation'];
+    
+    res.status(200).json({
+      success: true,
+      data: categories,
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des catégories:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur interne du serveur',
+    });
+  }
 };
 
 /**
- * GET /api/calendar/events/month/:year/:month
- * Récupère les événements d'un mois spécifique
+ * Récupère les événements hardcodés d'un mois spécifique
  */
 const getEventsByMonth = (req, res) => {
-    try {
-        const { year, month } = req.params;
-        
-        console.log(`📅 Récupération événements pour ${month}/${year} - IP: ${req.ip}`);
-        
-        // Validation des paramètres
-        const yearNum = parseInt(year);
-        const monthNum = parseInt(month);
-        
-        if (isNaN(yearNum) || isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
-            return res.status(400).json({
-                success: false,
-                error: 'Paramètres invalides',
-                message: 'L\'année et le mois doivent être des nombres valides (mois: 1-12)'
-            });
-        }
-        
-        // Filtrage par mois et année
-        const monthEvents = events.filter(event => {
-            const eventDate = new Date(event.date);
-            return eventDate.getFullYear() === yearNum && 
-                   eventDate.getMonth() + 1 === monthNum;
-        });
-        
-        // Tri par date
-        monthEvents.sort((a, b) => {
-            const dateA = new Date(`${a.date}T${a.time}`);
-            const dateB = new Date(`${b.date}T${b.time}`);
-            return dateA - dateB;
-        });
-        
-        console.log(`✅ ${monthEvents.length} événements trouvés pour ${month}/${year}`);
-        
-        res.status(200).json({
-            success: true,
-            message: `Événements de ${month}/${year} récupérés avec succès`,
-            month: monthNum,
-            year: yearNum,
-            count: monthEvents.length,
-            data: monthEvents
-        });
-        
-    } catch (error) {
-        console.error('❌ Erreur lors de la récupération des événements du mois:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur interne du serveur',
-            message: 'Impossible de récupérer les événements du mois'
-        });
+  try {
+    const { year, month } = req.params;
+    
+    // Validation
+    const yearNum = parseInt(year);
+    const monthNum = parseInt(month);
+    
+    if (isNaN(yearNum) || isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+      return res.status(400).json({
+        success: false,
+        error: 'Paramètres invalides',
+        message: 'Année et mois doivent être des nombres valides',
+      });
     }
+
+    // Filtrer les événements par année et mois
+    const filteredEvents = events.filter((event) => {
+      const eventDate = new Date(event.date);
+      return (
+        eventDate.getFullYear() === yearNum &&
+        eventDate.getMonth() + 1 === monthNum
+      );
+    });
+
+    // Tri par date
+    filteredEvents.sort((a, b) => {
+      const dateA = new Date(`${a.date}T${a.time || '00:00'}`);
+      const dateB = new Date(`${b.date}T${b.time || '00:00'}`);
+      return dateA - dateB;
+    });
+
+    res.status(200).json({
+      success: true,
+      count: filteredEvents.length,
+      data: filteredEvents,
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des événements du mois:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur interne du serveur',
+    });
+  }
 };
 
+// ============================================
+// FONCTIONS UTILISATEUR (événements MongoDB)
+// ============================================
+
+/**
+ * Crée un événement pour l'utilisateur connecté
+ */
+const createUserEvent = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const result = await calendarService.createEvent(userId, req.body);
+
+    if (result.success) {
+      return res.status(201).json({
+        success: true,
+        message: 'Événement créé avec succès',
+        data: result.data,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.error,
+        details: result.details,
+      });
+    }
+  } catch (error) {
+    console.error('createUserEvent error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur interne du serveur',
+    });
+  }
+};
+
+/**
+ * Récupère les événements de l'utilisateur connecté
+ */
+const getUserEvents = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const result = await calendarService.getUserEvents(userId);
+
+    if (result.success) {
+      return res.status(200).json({
+        success: true,
+        data: result.data,
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: result.error,
+      });
+    }
+  } catch (error) {
+    console.error('getUserEvents error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur interne du serveur',
+    });
+  }
+};
+
+/**
+ * Met à jour un événement de l'utilisateur
+ */
+const updateUserEvent = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const result = await calendarService.updateEvent(id, userId, req.body);
+
+    if (result.success) {
+      return res.status(200).json({
+        success: true,
+        message: 'Événement mis à jour avec succès',
+        data: result.data,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.error,
+      });
+    }
+  } catch (error) {
+    console.error('updateUserEvent error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur interne du serveur',
+    });
+  }
+};
+
+/**
+ * Supprime un événement de l'utilisateur
+ */
+const deleteUserEvent = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const result = await calendarService.deleteEvent(id, userId);
+
+    if (result.success) {
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+      });
+    } else {
+      return res.status(404).json({
+        success: false,
+        error: result.error,
+      });
+    }
+  } catch (error) {
+    console.error('deleteUserEvent error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur interne du serveur',
+    });
+  }
+};
+
+// ============================================
+// EXPORTS
+// ============================================
+
 module.exports = {
-    getAllEvents,
-    getEventById,
-    getCategories,
-    getEventsByMonth
+  // Événements publics (hardcodés)
+  getAllEvents,
+  getEventById,
+  getCategories,
+  getEventsByMonth,
+  
+  // Événements utilisateur (MongoDB)
+  createUserEvent,
+  getUserEvents,
+  updateUserEvent,
+  deleteUserEvent,
 };

@@ -1,4 +1,3 @@
-// sigl_frontend/src/pages/profile/ProfilePage.jsx
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import authService from '../../services/authService';

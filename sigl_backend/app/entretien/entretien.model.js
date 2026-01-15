@@ -1,39 +1,73 @@
 const mongoose = require('mongoose');
 
+// Schéma pour les entretiens
 const entretienSchema = new mongoose.Schema({
-    objet: {
-        type: String,
-        required: true,
-        minlength: 2
+  objet: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 500
+  },
+  
+  creneau: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Creneau',
+    required: true
+  },
+  
+  participants: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Utilisateur'
+  }],
+
+  // Suivi des confirmations par participant
+  confirmations: [{
+    participant: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Utilisateur'
     },
-    creneau: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Creneau',
-        required: true
+    confirme: {
+      type: Boolean,
+      default: false
     },
-    participants: {
-        type: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Utilisateur'
-        }],
-        validate: {
-            validator: function(v) {
-                return v.length >= 2;
-            },
-            message: 'Un entretien doit avoir au moins 2 participants'
-        },
-        required: true
-    },
-    statut: {
-        type: String,
-        enum: ['DEMANDE', 'CONFIRME', 'ANNULE', 'TERMINE'],
-        default: 'DEMANDE'
+    dateConfirmation: {
+      type: Date
     }
+  }],
+  
+  statut: {
+    type: String,
+    enum: ['DEMANDE', 'CONFIRME', 'ANNULE', 'TERMINE'],
+    default: 'DEMANDE'
+  },
+  
+  creePar: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Utilisateur',
+    required: true
+  },
+  
+  description: {
+    type: String,
+    maxlength: 2000
+  }
 }, {
-    timestamps: true,
-    collection: 'entretiens'
+  timestamps: true,
+  collection: 'entretiens'
 });
 
+// Validation: au moins 2 participants
+entretienSchema.pre('save', function(next) {
+  if (this.participants && this.participants.length < 2) {
+    throw new Error('Au moins 2 participants sont required');
+  }
+  next();
+});
+
+// Index pour les requêtes fréquentes
+entretienSchema.index({ statut: 1 });
+entretienSchema.index({ creePar: 1 });
 entretienSchema.index({ creneau: 1 });
+entretienSchema.index({ participants: 1 });
 
 module.exports = mongoose.model('Entretien', entretienSchema);
