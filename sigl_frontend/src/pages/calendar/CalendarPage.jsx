@@ -54,8 +54,14 @@ const CalendarPage = () => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth() + 1;
 
-        // Utilisation du cache pour optimiser les performances
-        let eventsData = await CalendarService.getCachedEventsByMonth(year, month);
+        // Récupérer tous les événements utilisateur
+        let eventsData = await CalendarService.getMyEvents();
+
+        // Filtrer par mois et année
+        eventsData = eventsData.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate.getFullYear() === year && eventDate.getMonth() + 1 === month;
+        });
 
         // Filtrage par catégorie si sélectionnée
         if (selectedCategory) {

@@ -3,6 +3,8 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import authService from '../../services/authService';
 import journalService from '../../services/journalService';
 import CalendarPage from '../calendar/CalendarPage';
+import DocumentsPage from '../documents/DocumentsPage';
+import EntretienPage from '../entretien/EntretienPage';
 
 /**
  * Dashboard principal de l'apprenti
@@ -24,9 +26,6 @@ const StudentDashboard = () => {
   };
 
   // --- Infos user (nom + avatar) ---
-
-  // On privilégie toujours "prenom + nom" (ou firstName + lastName),
-  // puis on retombe sur nom seul, puis l'email.
   const displayName =
     [currentUser?.prenom || currentUser?.firstName, currentUser?.nom || currentUser?.lastName]
       .filter(Boolean)
@@ -36,10 +35,7 @@ const StudentDashboard = () => {
     'Utilisateur';
 
   const avatarUrl = currentUser?.avatar || currentUser?.avatarUrl || null;
-
-  const avatarLetter =
-    displayName?.trim()?.charAt(0)?.toUpperCase() || '?';
-
+  const avatarLetter = displayName?.trim()?.charAt(0)?.toUpperCase() || '?';
   const roleLabel = currentUser?.role || 'APPRENTI';
 
   // --- Onglets du dashboard ---
@@ -58,16 +54,11 @@ const StudentDashboard = () => {
         setJournauxLoading(true);
         setJournauxError(null);
         const data = await journalService.getMyJournaux();
-        // data = [{ id, createdAt, updatedAt, periodes, status }]
-        const sorted = [...data].sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        );
+        const sorted = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setJournaux(sorted);
       } catch (error) {
         console.error('Erreur lors du chargement des journaux :', error);
-        setJournauxError(
-          "Impossible de charger votre journal de formation pour le moment."
-        );
+        setJournauxError("Impossible de charger votre journal de formation pour le moment.");
       } finally {
         setJournauxLoading(false);
       }
@@ -115,29 +106,23 @@ const StudentDashboard = () => {
     switch (activeTab) {
       case 'journal':
         return (
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <section className="bg-white/90 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Journal de formation
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Suivez vos missions et périodes d’alternance.
-                </p>
+                <h2 className="text-lg font-semibold text-gray-900">Journal de formation</h2>
+                <p className="text-sm text-gray-500">Suivez vos missions et périodes d’alternance.</p>
               </div>
               <button
                 type="button"
                 onClick={handleCreateJournal}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg shadow-lg text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:scale-105 transition-all duration-200"
               >
                 + Créer un journal
               </button>
             </div>
 
             {journauxLoading && (
-              <div className="py-6 text-sm text-gray-500">
-                Chargement de vos journaux...
-              </div>
+              <div className="py-6 text-sm text-gray-500">Chargement de vos journaux...</div>
             )}
 
             {journauxError && (
@@ -150,8 +135,7 @@ const StudentDashboard = () => {
               <div className="py-10 text-center text-sm text-gray-500">
                 Aucun journal pour le moment.
                 <br />
-                Cliquez sur «&nbsp;Créer un journal&nbsp;» pour commencer à
-                consigner vos missions.
+                Cliquez sur «&nbsp;Créer un journal&nbsp;» pour commencer à consigner vos missions.
               </div>
             )}
 
@@ -212,44 +196,30 @@ const StudentDashboard = () => {
 
       case 'documents':
         return (
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-sm text-gray-600">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              Mes documents
-            </h2>
-            <p>Module à venir : dépôt et suivi des documents (rapports, CV…).</p>
+          <section className="bg-transparent">
+            <DocumentsPage />
           </section>
         );
 
       case 'calendar':
         return (
           <section>
-      <CalendarPage embedded={true} />
-    </section>
+            <CalendarPage embedded={true} />
+          </section>
         );
 
       case 'entretiens':
         return (
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-sm text-gray-600">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              Entretiens
-            </h2>
-            <p>
-              Module à venir : planification et suivi des entretiens tuteur /
-              maître d’apprentissage.
-            </p>
+          <section className="bg-transparent">
+            <EntretienPage embedded={true} />
           </section>
         );
 
       case 'notifications':
         return (
           <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-sm text-gray-600">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              Notifications
-            </h2>
-            <p>
-              Module à venir : notifications importantes liées à votre
-              alternance.
-            </p>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Notifications</h2>
+            <p>Module à venir : notifications importantes liées à votre alternance.</p>
           </section>
         );
 
@@ -261,16 +231,16 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">I</span>
+              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-md">
+                <span className="text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text font-bold text-xl">I</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-800">IZIA</h1>
-                <p className="text-xs text-gray-500">Espace étudiant</p>
+                <h1 className="text-xl font-bold text-white">IZIA</h1>
+                <p className="text-xs text-white/80">Espace étudiant</p>
               </div>
             </div>
 
@@ -279,31 +249,29 @@ const StudentDashboard = () => {
               {/* Bloc utilisateur cliquable vers /profile */}
               <Link
                 to="/profile"
-                className="hidden md:flex items-center space-x-2 hover:bg-gray-100 px-3 py-1 rounded-lg transition"
+                className="hidden md:flex items-center space-x-2 hover:bg-white/10 px-3 py-1 rounded-lg transition duration-200"
               >
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
                     alt={`${displayName} avatar`}
-                    className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                    className="w-8 h-8 rounded-full object-cover border border-white/20"
                   />
                 ) : (
-                  <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                    <span className="text-primary-600 font-semibold text-sm">
-                      {avatarLetter}
-                    </span>
+                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <span className="text-white font-semibold text-sm">{avatarLetter}</span>
                   </div>
                 )}
 
                 <div className="text-sm text-right">
-                  <p className="font-medium text-gray-700">{displayName}</p>
-                  <p className="text-xs text-gray-500">{roleLabel}</p>
+                  <p className="font-medium text-white">{displayName}</p>
+                  <p className="text-xs text-white/80">{roleLabel}</p>
                 </div>
               </Link>
 
               <button
                 onClick={handleLogout}
-                className="text-gray-600 hover:text-gray-800 px-3 py-2 rounded-md text-sm font-medium transition"
+                className="text-white/80 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 bg-white/10 hover:bg-white/20"
               >
                 Déconnexion
               </button>
@@ -324,10 +292,10 @@ const StudentDashboard = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium flex items-center space-x-2 ${
+                  className={`whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium flex items-center space-x-2 transition-all duration-200 ${
                     isActive
-                      ? 'border-primary-600 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-blue-500 text-blue-600 bg-blue-50 rounded-t-md'
+                      : 'border-transparent text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-t-md'
                   }`}
                 >
                   <span>{tab.icon}</span>

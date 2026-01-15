@@ -8,9 +8,17 @@ import StudentDashboard from './pages/dashboard/StudentDashboard';
 import CreateJournalPage from './pages/journal/CreateJournalPage';
 import JournalDetailPage from './pages/journal/JournalDetailPage';
 
-import ProfilePage from './pages/profile/ProfilePage'; // ta page profil (branche KC)
-import CalendarPage from './pages/calendar/CalendarPage'; // branche calendrier
-import EventDetailPage from './pages/calendar/EventDetailPage'; // branche calendrier
+import ProfilePage from './pages/profile/ProfilePage';
+import CalendarPage from './pages/calendar/CalendarPage';
+import EventDetailPage from './pages/calendar/EventDetailPage';
+
+import DocumentsPage from './pages/documents/DocumentsPage';
+import DocumentDetailPage from './pages/documents/DocumentDetailPage';
+import DocumentCreatePage from './pages/documents/DocumentCreatePage';
+
+import EntretienPage from './pages/entretien/EntretienPage';
+import PlanificationEntretienPage from './pages/entretien/PlanificationEntretienPage';
+import CreerEntretienPage from './pages/entretien/CreerEntretienPage';
 
 function App() {
   return (
@@ -31,6 +39,16 @@ function App() {
         {/* Calendrier global */}
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/calendar/event/:id" element={<EventDetailPage />} />
+
+        {/* Documents */}
+        <Route path="/documents" element={<DocumentsPage />} />
+        <Route path="/documents/create" element={<DocumentCreatePage />} />
+        <Route path="/documents/:id" element={<DocumentDetailPage />} />
+
+        {/* Entretiens */}
+        <Route path="/entretiens" element={<EntretienPage />} />
+        <Route path="/entretiens/creer" element={<CreerEntretienPage />} />
+        <Route path="/entretiens/:entretienId/planification" element={<PlanificationEntretienPage />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

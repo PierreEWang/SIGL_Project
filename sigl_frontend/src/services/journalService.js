@@ -1,5 +1,5 @@
 // sigl_frontend/src/services/journalService.js
-import api from './api';
+import api from './Api';
 
 const journalService = {
   // Récupérer tous les journaux de l'apprenti connecté
@@ -19,6 +19,18 @@ const journalService = {
   async createJournal(journalPayload) {
     const response = await api.post('/journaux', journalPayload);
     return response.data?.data;
+  },
+
+  // Mettre à jour un journal
+  async updateJournal(id, journalPayload) {
+    const response = await api.put(`/journaux/${id}`, journalPayload);
+    return response.data?.data;
+  },
+
+  // Supprimer un journal
+  async deleteJournal(id) {
+    const response = await api.delete(`/journaux/${id}`);
+    return response.data;
   },
 };
 

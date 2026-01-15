@@ -70,9 +70,8 @@ const LoginForm = () => {
           formData.rememberMe
         );
 
-        if (res.mfaRequired) {
+        if (res?.mfaRequired) {
           const data = res.data || {};
-
           setStep('mfa');
           setPendingUserId(data.userId || data.user?.id || null);
           setDeliveryMethod(data.deliveryMethod || 'email');
@@ -82,10 +81,8 @@ const LoginForm = () => {
           return;
         }
 
-        // Login sans MFA : tokens déjà stockés
         navigate('/dashboard');
       } else {
-        // Étape MFA
         if (!mfaCode.trim()) {
           setErrors((prev) => ({
             ...prev,
@@ -131,148 +128,104 @@ const LoginForm = () => {
 
         {isCredentialsStep ? (
           <>
-            {/* Email */}
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Adresse email
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email
               </label>
               <input
-                id="email"
-                name="email"
                 type="email"
-                autoComplete="email"
-                className={`block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
+                name="email"
+                className="input-field"
                 value={formData.email}
                 onChange={handleChange}
+                disabled={isLoading}
               />
               {errors.email && (
                 <p className="mt-1 text-xs text-red-600">{errors.email}</p>
               )}
             </div>
 
-            {/* Password */}
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Mot de passe
               </label>
               <input
-                id="password"
-                name="password"
                 type="password"
-                autoComplete="current-password"
-                className={`block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 ${
-                  errors.password ? 'border-red-500' : 'border-gray-300'
-                }`}
+                name="password"
+                className="input-field"
                 value={formData.password}
                 onChange={handleChange}
+                disabled={isLoading}
               />
               {errors.password && (
                 <p className="mt-1 text-xs text-red-600">{errors.password}</p>
               )}
             </div>
 
-            {/* Remember me + forgot password */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center space-x-2 text-sm text-gray-700">
-                <input
-                  id="rememberMe"
-                  name="rememberMe"
-                  type="checkbox"
-                  checked={formData.rememberMe}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                <span>Se souvenir de moi</span>
-              </label>
+            <label className="flex items-center space-x-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                name="rememberMe"
+                checked={formData.rememberMe}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              <span>Rester connecté</span>
+            </label>
 
-              <Link
-                to="/forgot-password"
-                className="text-sm text-primary-600 hover:text-primary-700"
-              >
-                Mot de passe oublié ?
+            <button type="submit" className="btn-primary" disabled={isLoading}>
+              {isLoading ? 'Connexion...' : 'Se connecter'}
+            </button>
+
+            <p className="text-sm text-gray-600 text-center">
+              Pas de compte ?{' '}
+              <Link to="/register" className="text-primary-600 hover:underline">
+                Inscription
               </Link>
-            </div>
+            </p>
           </>
         ) : (
           <>
-            <p className="text-sm text-gray-700">
-              Un code de vérification a été envoyé par{' '}
-              <span className="font-semibold">
-                {deliveryMethod === 'sms' ? 'SMS' : 'email'}
-              </span>
-              .
-            </p>
+            <div className="text-sm text-gray-700">
+              Un code MFA a été envoyé par <b>{deliveryMethod || 'email'}</b>.
+            </div>
 
             <div>
-              <label
-                htmlFor="mfaCode"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Code de vérification
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Code MFA
               </label>
               <input
-                id="mfaCode"
-                name="mfaCode"
                 type="text"
-                inputMode="numeric"
-                className={`block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 ${
-                  errors.mfaCode ? 'border-red-500' : 'border-gray-300'
-                }`}
+                name="mfaCode"
+                className="input-field"
                 value={mfaCode}
-                onChange={(e) => {
-                  setMfaCode(e.target.value);
-                  setErrors((prev) => ({
-                    ...prev,
-                    mfaCode: undefined,
-                    submit: undefined,
-                  }));
-                }}
+                onChange={(e) => setMfaCode(e.target.value)}
+                disabled={isLoading}
               />
               {errors.mfaCode && (
                 <p className="mt-1 text-xs text-red-600">{errors.mfaCode}</p>
               )}
             </div>
 
+            <button type="submit" className="btn-primary" disabled={isLoading}>
+              {isLoading ? 'Vérification...' : 'Valider'}
+            </button>
+
             <button
               type="button"
-              className="text-xs text-gray-500 underline"
+              className="w-full text-sm text-gray-600 hover:underline"
               onClick={() => {
                 setStep('credentials');
                 setMfaCode('');
                 setErrors({});
               }}
+              disabled={isLoading}
             >
-              Retour aux identifiants
+              Revenir aux identifiants
             </button>
           </>
         )}
-
-        {/* Submit */}
-        <div>
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Connexion...' : isCredentialsStep ? 'Se connecter' : 'Valider le code'}
-          </button>
-        </div>
       </form>
-
-      <p className="mt-4 text-center text-sm text-gray-600">
-        Pas encore de compte ?{' '}
-        <Link to="/register" className="text-primary-600 hover:text-primary-700">
-          Créer un compte
-        </Link>
-      </p>
     </div>
   );
 };
