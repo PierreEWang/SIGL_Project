@@ -15,12 +15,15 @@ class EntretienController {
         });
       }
 
-      const { objet, debut, fin, participants } = req.body;
+      const { objet, debut, fin, participants, participantIds } = req.body;
+      
+      // Accepter soit "participants" soit "participantIds"
+      const participantsList = participants || participantIds;
 
-      if (!objet || !debut || !fin || !participants) {
+      if (!objet || !debut || !fin || !participantsList) {
         return res.status(400).json({
           success: false,
-          error: 'Champs requis: objet, debut, fin, participants'
+          error: 'Champs requis: objet, debut, fin, participants (ou participantIds)'
         });
       }
 
@@ -29,7 +32,7 @@ class EntretienController {
         objet,
         debut,
         fin,
-        participants
+        participantsList
       );
 
       return res.status(201).json({
