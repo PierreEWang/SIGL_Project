@@ -73,16 +73,8 @@ class EntretienService {
       throw new Error('Au moins 2 participants sont requis');
     }
 
-    // Vérifier la présence d'au moins un MA et un TP parmi les participants
-    const participantsDocs = await Utilisateur.find({ _id: { $in: participantIds } }, 'role').lean();
-    const hasMA = participantsDocs.some(p => p.role === 'MA');
-    const hasTP = participantsDocs.some(p => p.role === 'TP');
-
-    if (!hasMA || !hasTP) {
-      throw new Error('Les participants doivent inclure au moins un Maître d\'Apprentissage (MA) et un Tuteur Pédagogique (TP)');
-    }
-
     // Si le créateur est APPRENTI, il ne peut pas inviter d'autres APPRENTIS
+    const participantsDocs = await Utilisateur.find({ _id: { $in: participantIds } }, 'role').lean();
     const creator = await Utilisateur.findById(userId).lean();
     if (creator?.role === 'APPRENTI') {
       const hasOtherApprentis = participantsDocs.some(p => p.role === 'APPRENTI' && p._id.toString() !== userId.toString());

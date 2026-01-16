@@ -7,6 +7,7 @@ import StudentDashboard from './pages/dashboard/StudentDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import TutorDashboard from './pages/dashboard/TutorDashboard';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
+import DashboardRedirect from './components/DashboardRedirect';
 
 import CreateJournalPage from './pages/journal/CreateJournalPage';
 import JournalDetailPage from './pages/journal/JournalDetailPage';
@@ -41,7 +42,8 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
 
         {/* Espace apprenti */}
-        <Route path="/dashboard" element={<StudentDashboard />} />
+        <Route path="/dashboard" element={<DashboardRedirect />} />
+        <Route path="/student-dashboard" element={<StudentDashboard />} />
         <Route
           path="/admin"
           element={

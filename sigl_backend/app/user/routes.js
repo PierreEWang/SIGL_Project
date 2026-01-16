@@ -25,12 +25,16 @@ router.get('/available-contacts', authenticate, async (req, res) => {
       ? baseRoles.filter((role) => role !== 'APPRENTI')
       : baseRoles;
 
+    // Filtrer par rôle ET par statut ACTIF
     const users = await Utilisateur.find(
-      { role: { $in: roles } },
-      'nom email role _id'
+      { role: { $in: roles }, status: 'ACTIF' },
+      'nom email role _id firstName lastName'
     );
+    
+    console.log(`[available-contacts] Found ${users.length} users for roles: ${roles.join(', ')}`);
     res.json({ success: true, users });
   } catch (error) {
+    console.error('[available-contacts] Error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

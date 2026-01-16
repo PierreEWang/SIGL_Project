@@ -26,8 +26,13 @@ const DemandeEntretienPage = () => {
     const loadUsers = async () => {
         try {
             const result = await bookingService.getAvailableContacts();
+            console.log('[DemandeEntretien] Available contacts:', result);
+            console.log('[DemandeEntretien] Current user:', currentUser);
             if (result.success) {
-                const filtered = result.users.filter(u => u._id !== currentUser?.id);
+                // Filtrer l'utilisateur connecté (gérer id et _id)
+                const currentUserId = currentUser?.id || currentUser?._id;
+                const filtered = result.users.filter(u => u._id !== currentUserId);
+                console.log('[DemandeEntretien] Filtered users:', filtered);
                 setAvailableUsers(filtered);
             }
         } catch (err) {

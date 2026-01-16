@@ -155,17 +155,6 @@ const TutorDashboard = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Bouton créer entretien */}
-        <div className="mb-6 flex justify-end">
-          <button
-            onClick={() => navigate('/entretien/demander')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
-          >
-            <span>💬</span>
-            Demander un entretien
-          </button>
-        </div>
-
         {/* Tab: Calendar */}
         {activeTab === 'calendar' && (
           <div className="bg-white rounded-lg shadow">
@@ -176,6 +165,17 @@ const TutorDashboard = () => {
         {/* Tab: Entretiens */}
         {activeTab === 'entretiens' && (
           <div>
+            {/* Bouton créer entretien - uniquement dans l'onglet Entretiens */}
+            <div className="mb-6 flex justify-end">
+              <button
+                onClick={() => navigate('/entretien/demander')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
+              >
+                <span>💬</span>
+                Demander un entretien
+              </button>
+            </div>
+
             {entretiensLoading ? (
               <div className="text-center py-12">
                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
