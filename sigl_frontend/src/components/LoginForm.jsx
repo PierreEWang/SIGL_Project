@@ -82,7 +82,12 @@ const LoginForm = () => {
         }
 
         const user = res?.data?.user;
-        const destination = user?.role === 'ADMIN' ? '/admin' : '/dashboard';
+        let destination = '/dashboard';
+        if (user?.role === 'ADMIN') {
+          destination = '/admin';
+        } else if (['MA', 'TP', 'PROF', 'CA', 'RC'].includes(user?.role)) {
+          destination = '/tuteur-dashboard';
+        }
         navigate(destination);
       } else {
         if (!mfaCode.trim()) {
@@ -101,7 +106,12 @@ const LoginForm = () => {
         );
 
         const user = authService.getCurrentUser();
-        const destination = user?.role === 'ADMIN' ? '/admin' : '/dashboard';
+        let destination = '/dashboard';
+        if (user?.role === 'ADMIN') {
+          destination = '/admin';
+        } else if (['MA', 'TP', 'PROF', 'CA', 'RC'].includes(user?.role)) {
+          destination = '/tuteur-dashboard';
+        }
         navigate(destination);
       }
     } catch (err) {

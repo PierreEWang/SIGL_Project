@@ -8,6 +8,12 @@ const router = express.Router();
 router.use(authenticate);
 
 /**
+ * POST /api/evaluations
+ * Crée une nouvelle évaluation pour un apprenti
+ */
+router.post('/', evaluationController.createEvaluation.bind(evaluationController));
+
+/**
  * POST /api/evaluations/entretien/:entretienId
  * Crée une nouvelle évaluation pour un entretien
  */

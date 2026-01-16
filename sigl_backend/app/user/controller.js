@@ -369,6 +369,46 @@ const listUsers = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/tuteur/apprentices
+ * Retourne les apprentices assignés au tuteur (MA/TP/PROF) actuel
+ */
+const getTuteurApprentices = async (req, res) => {
+  try {
+    const tuteurId = req.user?.userId;
+    const tuteurRole = req.user?.role;
+
+    if (!tuteurId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Utilisateur non authentifié',
+      });
+    }
+
+    // Vérifier que l'utilisateur est un tuteur
+    if (!['MA', 'TP', 'PROF', 'CA', 'RC'].includes(tuteurRole)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Seuls les tuteurs peuvent accéder à cette ressource',
+      });
+    }
+
+    // Récupérer les apprentices assignés au tuteur
+    const apprentices = await userRepository.findApprenticesByTuteur(tuteurId);
+
+    return res.status(200).json({
+      success: true,
+      data: apprentices,
+    });
+  } catch (error) {
+    console.error('getTuteurApprentices error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la récupération des apprentices',
+    });
+  }
+};
+
 module.exports = {
   register,
   getProfile,
@@ -377,4 +417,5 @@ module.exports = {
   listUsers,
    approveUser,
    rejectUser,
+   getTuteurApprentices,
 };

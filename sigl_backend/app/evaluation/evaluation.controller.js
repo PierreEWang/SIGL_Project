@@ -2,7 +2,64 @@ const evaluationService = require('./evaluation.service');
 
 class EvaluationController {
   /**
-   * Crée une nouvelle évaluation
+   * Crée une nouvelle évaluation (POST /api/evaluations)
+   */
+  async createEvaluation(req, res) {
+    try {
+      const evaluateurId = req.user?.userId;
+      const {
+        apprenticeId,
+        entretienId,
+        evaluationDate,
+        competences,
+        moyenneGenerale,
+        pointsForts,
+        axesAmelioration
+      } = req.body;
+
+      if (!apprenticeId) {
+        return res.status(400).json({
+          success: false,
+          error: 'L\'ID de l\'apprenti est requis'
+        });
+      }
+
+      if (!competences || !Array.isArray(competences)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Les compétences sont requises'
+        });
+      }
+
+      const evaluation = await evaluationService.createEvaluationForApprentice(
+        apprenticeId,
+        evaluateurId,
+        {
+          entretienId,
+          evaluationDate: evaluationDate || new Date(),
+          competences,
+          moyenneGenerale,
+          pointsForts,
+          axesAmelioration
+        }
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: 'Évaluation créée avec succès',
+        data: evaluation
+      });
+    } catch (error) {
+      console.error('Erreur création évaluation:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Crée une nouvelle évaluation pour un entretien
    */
   async creerEvaluation(req, res) {
     try {

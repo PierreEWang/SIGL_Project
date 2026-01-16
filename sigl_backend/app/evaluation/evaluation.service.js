@@ -3,6 +3,31 @@ const Entretien = require('../entretien/entretien.model');
 
 class EvaluationService {
   /**
+   * Crée une évaluation pour un apprenti
+   */
+  async createEvaluationForApprentice(apprenticeId, evaluateurId, evaluationData) {
+    // Créer l'évaluation
+    const evaluation = await evaluationRepository.create({
+      apprenti: apprenticeId,
+      evaluateur: evaluateurId,
+      entretien: evaluationData.entretienId || null,
+      dateEvaluation: evaluationData.evaluationDate || new Date(),
+      competences: evaluationData.competences || [],
+      moyenneGenerale: evaluationData.moyenneGenerale || 0,
+      pointsForts: evaluationData.pointsForts || '',
+      axesAmelioration: evaluationData.axesAmelioration || '',
+      etat: 'SOUMISE',
+      historique: [{
+        date: new Date(),
+        action: 'CREATION',
+        auteur: evaluateurId
+      }]
+    });
+
+    return evaluation;
+  }
+
+  /**
    * Crée une nouvelle évaluation pour un entretien
    */
   async creerEvaluation(entretienId, evaluateurId, evaluationData) {

@@ -162,16 +162,6 @@ const listAllUsers = async () => {
   }
 };
 
-module.exports = {
-  createUser,
-  findUserById,
-  findUserByEmail,
-  findUserByUsername,
-  updateUser,
-  deleteUser,
-  listAllUsers,
-};
-
 const updateUserStatus = async (userId, status, { approvedBy, rejectionReason } = {}) => {
   try {
     if (!VALID_STATUS.includes(status)) {
@@ -217,4 +207,35 @@ const updateUserStatus = async (userId, status, { approvedBy, rejectionReason } 
     console.error('Repository updateUserStatus - Database error:', error);
     throw new Error(`Échec de la mise à jour du statut : ${error.message}`);
   }
+};
+
+/**
+ * Récupérer les apprentices assignés à un tuteur
+ */
+const findApprenticesByTuteur = async (tuteurId) => {
+  try {
+    // Pour l'instant, retourner tous les apprentis ACTIF
+    // (relation tuteur-apprenti à implémenter si besoin)
+    const apprentices = await Utilisateur.find({
+      role: 'APPRENTI',
+      status: 'ACTIF'
+    }).select('nom email prenom firstName lastName role createdAt _id');
+
+    return apprentices.map(a => a.toSafeObject());
+  } catch (error) {
+    console.error('Repository findApprenticesByTuteur - Database error:', error);
+    throw new Error(`Échec de la récupération des apprentices : ${error.message}`);
+  }
+};
+
+module.exports = {
+  createUser,
+  findUserById,
+  findUserByEmail,
+  findUserByUsername,
+  updateUser,
+  deleteUser,
+  listAllUsers,
+  updateUserStatus,
+  findApprenticesByTuteur,
 };

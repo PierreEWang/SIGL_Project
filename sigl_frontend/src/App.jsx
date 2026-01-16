@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import RegisterPage from './pages/RegisterPage';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
+import TutorDashboard from './pages/dashboard/TutorDashboard';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 
 import CreateJournalPage from './pages/journal/CreateJournalPage';
@@ -29,6 +30,8 @@ import PlanifierSoutenancePage from './pages/soutenance/PlanifierSoutenancePage'
 import MaSoutenancePage from './pages/soutenance/MaSoutenancePage';
 import GestionSoutenancesPage from './pages/soutenance/GestionSoutenancesPage';
 
+import EvaluationForm from './pages/evaluation/EvaluationForm';
+
 function App() {
   return (
     <BrowserRouter>
@@ -47,6 +50,7 @@ function App() {
             </ProtectedAdminRoute>
           }
         />
+        <Route path="/tuteur-dashboard" element={<TutorDashboard />} />
         <Route path="/journal/create" element={<CreateJournalPage />} />
         <Route path="/journal/:id" element={<JournalDetailPage />} />
 
@@ -68,6 +72,10 @@ function App() {
         <Route path="/entretiens/creer" element={<CreerEntretienPage />} />
         <Route path="/entretiens/:entretienId" element={<DetailEntretienPage />} />
         <Route path="/entretiens/:entretienId/planification" element={<PlanificationEntretienPage />} />
+
+        {/* Évaluations */}
+        <Route path="/evaluations/create" element={<EvaluationForm />} />
+        <Route path="/evaluations/create/:entretienId" element={<EvaluationForm />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

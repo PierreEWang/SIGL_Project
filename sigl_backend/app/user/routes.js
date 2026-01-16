@@ -17,6 +17,31 @@ const Utilisateur = require('../common/models/user.model');  // ← Correction i
 // POST /api/users/register - Enregistrer un nouvel utilisateur (public)
 router.post('/register', userController.register);
 
+// GET /api/users/available-contacts - Lister les contacts disponibles
+router.get('/available-contacts', authenticate, async (req, res) => {
+  try {
+    const baseRoles = ['APPRENTI', 'TP', 'MA', 'PROF', 'CA', 'RC'];
+    const roles = req.user?.role === 'APPRENTI'
+      ? baseRoles.filter((role) => role !== 'APPRENTI')
+      : baseRoles;
+
+    const users = await Utilisateur.find(
+      { role: { $in: roles } },
+      'nom email role _id'
+    );
+    res.json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/users/tuteur/apprentices - Lister les apprentices assignés au tuteur
+router.get(
+  '/tuteur/apprentices',
+  authenticate,
+  userController.getTuteurApprentices
+);
+
 // GET /api/users - Lister tous les utilisateurs (admin/staff seulement)
 router.get(
   '/',
@@ -24,18 +49,6 @@ router.get(
   staffOnly(),
   userController.listUsers
 );
-
-router.get('/available-contacts', authenticate, async (req, res) => {
-    try {
-        const users = await Utilisateur.find(
-            { role: { $in: ['APPRENTI', 'TP', 'MA', 'PROF', 'CA', 'RC'] } },
-            'nom email role _id'
-        );
-        res.json({ success: true, users });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
 
 // GET /api/users/:id - Obtenir le profil utilisateur (utilisateur lui-même ou admin)
 router.get(
