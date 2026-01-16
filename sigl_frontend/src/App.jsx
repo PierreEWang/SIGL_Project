@@ -53,6 +53,7 @@ function App() {
 
         {/* Entretiens */}
         <Route path="/entretiens" element={<EntretienPage />} />
+        <Route path="/entretien/demander" element={<DemandeEntretienPage />} />
         <Route path="/entretiens/creer" element={<CreerEntretienPage />} />
         <Route path="/entretiens/:entretienId/planification" element={<PlanificationEntretienPage />} />
 

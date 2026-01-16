@@ -319,7 +319,15 @@ const StudentDashboard = () => {
         return (
           <section className="bg-white/90 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-6">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Entretiens & Soutenances</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Entretiens & Soutenances</h2>
+                <Link
+                  to="/entretien/demander"
+                  className="inline-flex items-center px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition"
+                >
+                  + Demander un entretien
+                </Link>
+              </div>
               
               {entretiensLoading && soutenanceLoading && (
                 <div className="py-6 text-sm text-gray-500">Chargement des entretiens et soutenances...</div>
