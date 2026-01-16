@@ -73,6 +73,30 @@ const utilisateurSchema = new mongoose.Schema(
       default: 'APPRENTI',
     },
 
+    // Statut et approbation d'inscription
+    status: {
+      type: String,
+      enum: ['ACTIF', 'EN_ATTENTE', 'REJETE'],
+      default: 'ACTIF',
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectionReason: {
+      type: String,
+      default: null,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Utilisateur',
+      default: null,
+    },
+
     // Champs spécifiques / legacy
     idApprenti: {
       type: mongoose.Schema.Types.ObjectId,
