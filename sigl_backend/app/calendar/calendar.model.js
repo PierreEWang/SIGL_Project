@@ -36,6 +36,11 @@ const calendarEventSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     default: null,
   },
+  entretienId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Entretien',
+    default: null,
+  },
 }, {
   timestamps: true,
   collection: 'calendarevents',

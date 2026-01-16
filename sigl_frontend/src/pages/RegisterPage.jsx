@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import authService from '../services/authService';
 
+const ROLE_OPTIONS = [
+  { value: 'APPRENTI', label: 'Apprenti' },
+  { value: 'MA', label: 'Maitre Apprentissage' },
+  { value: 'TP', label: 'Tuteur Pédagogique' },
+  { value: 'CA', label: 'Coordinateur Apprentissage' },
+  { value: 'RC', label: 'Responsable Campus' },
+  { value: 'PROF', label: 'Professeur' },
+];
+
 const RegisterPage = () => {
   const navigate = useNavigate();
 
@@ -16,6 +25,7 @@ const RegisterPage = () => {
     confirmPassword: '',
     // Champ optionnel
     codePostal: '',
+    role: 'APPRENTI',
   });
 
   const [errors, setErrors] = useState({});
@@ -106,6 +116,12 @@ const RegisterPage = () => {
         }
         break;
 
+      case 'role':
+        if (!value) {
+          error = 'Le rôle est requis';
+        }
+        break;
+
       default:
         break;
     }
@@ -157,6 +173,7 @@ const RegisterPage = () => {
       'telephone',
       'password',
       'confirmPassword',
+      'role',
     ];
 
     requiredFields.forEach((key) => {
@@ -190,7 +207,7 @@ const RegisterPage = () => {
         username,
         email: formData.email,
         password: formData.password,
-        role: 'APPRENTI',
+        role: formData.role,
         firstName: formData.prenom,
         lastName: formData.nom,
         birthDate: formData.dateNaissance,
@@ -201,9 +218,13 @@ const RegisterPage = () => {
       const response = await authService.register(userData);
       console.log('✅ Inscription réussie :', response);
 
+      const isPending = formData.role !== 'APPRENTI';
+
       navigate('/', {
         state: {
-          message: 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.',
+          message: isPending
+            ? 'Demande envoyée. Un administrateur doit valider votre compte avant connexion.'
+            : 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.',
           email: formData.email,
         },
       });
@@ -382,6 +403,30 @@ const RegisterPage = () => {
                     </p>
                   )}
                 </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Rôle souhaité <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="role"
+                      value={formData.role}
+                      onChange={handleChange}
+                      className={`input-field ${errors.role ? 'border-red-500' : ''}`}
+                    >
+                      {ROLE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Les rôles autres que Apprenti doivent être validés par un administrateur avant connexion.
+                    </p>
+                    {errors.role && (
+                      <p className="text-xs text-red-500 mt-1">{errors.role}</p>
+                    )}
+                  </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>

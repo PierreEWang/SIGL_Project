@@ -1,6 +1,7 @@
 const Utilisateur = require('../common/models/user.model');
 
 const VALID_ROLES = ['APPRENTI', 'MA', 'TP', 'CA', 'RC', 'PROF', 'ADMIN'];
+const VALID_STATUS = ['ACTIF', 'EN_ATTENTE', 'REJETE'];
 
 /**
  * Créer un nouvel utilisateur (sans mot de passe).
@@ -24,6 +25,7 @@ const createUser = async (userData) => {
       nom: userData.username,
       email: userData.email.toLowerCase(),
       role: dbRole,
+      status: userData.status || 'ACTIF',
     };
 
     if (userData.firstName) {
@@ -168,4 +170,51 @@ module.exports = {
   updateUser,
   deleteUser,
   listAllUsers,
+};
+
+const updateUserStatus = async (userId, status, { approvedBy, rejectionReason } = {}) => {
+  try {
+    if (!VALID_STATUS.includes(status)) {
+      throw new Error(`Invalid status: ${status}. Must be one of: ${VALID_STATUS.join(', ')}`);
+    }
+
+    const update = {
+      status,
+      approvedBy: approvedBy || null,
+    };
+
+    if (status === 'ACTIF') {
+      update.approvedAt = new Date();
+      update.rejectedAt = null;
+      update.rejectionReason = null;
+    }
+
+    if (status === 'REJETE') {
+      update.rejectedAt = new Date();
+      update.rejectionReason = rejectionReason || null;
+      update.approvedAt = null;
+    }
+
+    if (status === 'EN_ATTENTE') {
+      update.approvedAt = null;
+      update.rejectedAt = null;
+      update.rejectionReason = null;
+      update.approvedBy = null;
+    }
+
+    const updatedUser = await Utilisateur.findByIdAndUpdate(
+      userId,
+      { $set: update },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      throw new Error('Utilisateur non trouvé');
+    }
+
+    return updatedUser.toSafeObject();
+  } catch (error) {
+    console.error('Repository updateUserStatus - Database error:', error);
+    throw new Error(`Échec de la mise à jour du statut : ${error.message}`);
+  }
 };

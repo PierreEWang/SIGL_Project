@@ -192,6 +192,18 @@ const JournalDetailPage = () => {
         </select>
       </div>
 
+      {journal?.deadline && (
+        <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded">
+          <p className="text-sm font-medium text-orange-900">
+            📅 Deadline: {new Date(journal.deadline).toLocaleDateString('fr-FR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric'
+            })}
+          </p>
+        </div>
+      )}
+
       <h1 className="text-2xl font-semibold mb-4">
         Détail du journal de formation
       </h1>

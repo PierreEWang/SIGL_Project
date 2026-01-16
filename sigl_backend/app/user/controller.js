@@ -73,6 +73,8 @@ const register = async (req, res) => {
       });
     }
 
+    const status = dbRole === 'APPRENTI' ? 'ACTIF' : 'EN_ATTENTE';
+
     // Vérifie doublons (email / username) AVANT création
     const existingByEmail = await userRepository.findUserByEmail(email);
     if (existingByEmail) {
@@ -93,6 +95,7 @@ const register = async (req, res) => {
       username,
       email,
       role: dbRole,
+      status,
       firstName: normalizeName(firstName ?? prenom),
       lastName: normalizeName(lastName ?? nom),
       telephone,
@@ -169,6 +172,77 @@ const getProfile = async (req, res) => {
     return res.status(500).json({
       error: 'Erreur interne du serveur',
     });
+  }
+};
+
+const approveUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        error: "Format d'ID utilisateur invalide",
+      });
+    }
+
+    const existing = await userService.getUserProfile(userId);
+    if (!existing.success) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    if (existing.data.status === 'ACTIF') {
+      return res.status(400).json({ error: 'Utilisateur déjà actif' });
+    }
+
+    const result = await userService.approveUser(userId, req.user?.id || req.user?._id);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error, details: result.details });
+    }
+
+    return res.status(200).json({
+      message: 'Utilisateur validé',
+      user: result.data,
+    });
+  } catch (error) {
+    console.error('approveUser error:', error);
+    return res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+};
+
+const rejectUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { reason } = req.body || {};
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        error: "Format d'ID utilisateur invalide",
+      });
+    }
+
+    const existing = await userService.getUserProfile(userId);
+    if (!existing.success) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    if (existing.data.status === 'REJETE') {
+      return res.status(400).json({ error: 'Utilisateur déjà rejeté' });
+    }
+
+    const result = await userService.rejectUser(userId, reason);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error, details: result.details });
+    }
+
+    return res.status(200).json({
+      message: 'Utilisateur rejeté',
+      user: result.data,
+    });
+  } catch (error) {
+    console.error('rejectUser error:', error);
+    return res.status(500).json({ error: 'Erreur interne du serveur' });
   }
 };
 
@@ -276,17 +350,20 @@ const listUsers = async (req, res) => {
 
     if (result.success) {
       return res.status(200).json({
-        users: result.data,
+        success: true,
+        data: result.data,
         count: result.data.length,
       });
     } else {
       return res.status(500).json({
+        success: false,
         error: result.error,
       });
     }
   } catch (error) {
     console.error('listUsers error:', error);
     return res.status(500).json({
+      success: false,
       error: 'Erreur interne du serveur',
     });
   }
@@ -298,4 +375,6 @@ module.exports = {
   updateUser,
   deleteUser,
   listUsers,
+   approveUser,
+   rejectUser,
 };

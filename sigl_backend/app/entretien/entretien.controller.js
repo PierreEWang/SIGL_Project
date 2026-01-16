@@ -156,6 +156,43 @@ class EntretienController {
       });
     }
   }
+
+  /**
+   * Met à jour un entretien avec historisation
+   */
+  async mettreAJourEntretien(req, res) {
+    try {
+      const { entretienId } = req.params;
+      const userId = req.user?.userId;
+      const { updates, notes } = req.body;
+
+      if (!updates || Object.keys(updates).length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Aucune modification fournie'
+        });
+      }
+
+      const entretien = await entretienService.mettreAJourEntretien(
+        entretienId,
+        updates,
+        userId,
+        notes
+      );
+
+      return res.json({
+        success: true,
+        message: 'Entretien mis à jour',
+        data: entretien
+      });
+    } catch (error) {
+      console.error('Erreur mise à jour entretien:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new EntretienController();

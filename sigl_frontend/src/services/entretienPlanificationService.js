@@ -1,4 +1,4 @@
-import api from './api';
+import api from './Api';
 
 const entretienPlanificationService = {
   /**
@@ -172,6 +172,22 @@ const entretienPlanificationService = {
       return response.data.data || response.data;
     } catch (error) {
       console.error('Erreur suppression évaluation:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Met à jour un entretien avec historisation
+   */
+  async mettreAJourEntretien(entretienId, updates, notes = '') {
+    try {
+      const response = await api.put(`/entretiens/${entretienId}`, {
+        updates,
+        notes
+      });
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Erreur mise à jour entretien:', error);
       throw error;
     }
   }

@@ -1,5 +1,7 @@
 const entretienRepository = require('./entretien.repository');
 const userRepository = require('../user/repository');
+const CalendarEvent = require('../calendar/calendar.model');
+const Utilisateur = require('../common/models/user.model');
 
 class EntretienService {
   /**
@@ -71,6 +73,24 @@ class EntretienService {
       throw new Error('Au moins 2 participants sont requis');
     }
 
+    // Vérifier la présence d'au moins un MA et un TP parmi les participants
+    const participantsDocs = await Utilisateur.find({ _id: { $in: participantIds } }, 'role').lean();
+    const hasMA = participantsDocs.some(p => p.role === 'MA');
+    const hasTP = participantsDocs.some(p => p.role === 'TP');
+
+    if (!hasMA || !hasTP) {
+      throw new Error('Les participants doivent inclure au moins un Maître d\'Apprentissage (MA) et un Tuteur Pédagogique (TP)');
+    }
+
+    // Si le créateur est APPRENTI, il ne peut pas inviter d'autres APPRENTIS
+    const creator = await Utilisateur.findById(userId).lean();
+    if (creator?.role === 'APPRENTI') {
+      const hasOtherApprentis = participantsDocs.some(p => p.role === 'APPRENTI' && p._id.toString() !== userId.toString());
+      if (hasOtherApprentis) {
+        throw new Error('Un apprenti ne peut pas inviter d\'autres apprentis à un entretien');
+      }
+    }
+
     // Créer le tableau de confirmations (tous initialisés à false sauf le créateur)
     const confirmations = participantIds.map(pId => ({
       participant: pId,
@@ -92,7 +112,32 @@ class EntretienService {
       disponibilite: 'RESERVE'
     };
 
-    return await entretienRepository.createWithCreneau(entretienData, creneauData);
+    // Créer l'entretien
+    const entretien = await entretienRepository.createWithCreneau(entretienData, creneauData);
+
+    // Créer un événement calendrier pour chaque participant
+    try {
+      const debutDate = new Date(debut);
+      const dateStr = debutDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      const timeStr = debutDate.toTimeString().split(' ')[0].slice(0, 5); // HH:MM
+
+      for (const participantId of participantIds) {
+        await CalendarEvent.create({
+          title: `Entretien - ${objet}`,
+          description: `Entretien avec ${participantIds.length} participants`,
+          date: dateStr,
+          time: timeStr,
+          category: 'réunion',
+          userId: participantId,
+          entretienId: entretien._id
+        });
+      }
+    } catch (error) {
+      console.error('Erreur création événements calendrier:', error);
+      // Ne pas laisser cette erreur bloquer la création de l'entretien
+    }
+
+    return entretien;
   }
 
   /**
@@ -156,6 +201,13 @@ class EntretienService {
       throw new Error('Vous n\'êtes pas participant à cet entretien');
     }
 
+    // Supprimer les événements calendrier liés
+    try {
+      await CalendarEvent.deleteMany({ entretienId });
+    } catch (error) {
+      console.error('Erreur suppression événements calendrier:', error);
+    }
+
     return await entretienRepository.updateStatut(entretienId, 'ANNULE');
   }
 
@@ -189,6 +241,39 @@ class EntretienService {
    */
   async terminerEntretien(entretienId) {
     return await entretienRepository.updateStatut(entretienId, 'TERMINE');
+  }
+
+  /**
+   * Met à jour un entretien avec historisation
+   */
+  async mettreAJourEntretien(entretienId, updates, userId, notes = '') {
+    const entretien = await entretienRepository.findById(entretienId);
+    if (!entretien) {
+      throw new Error('Entretien non trouvé');
+    }
+
+    // Enregistrer les modifications dans l'historique
+    const historique = [];
+    for (const [champ, nouvelleValeur] of Object.entries(updates)) {
+      if (champ !== 'historique' && entretien[champ] !== nouvelleValeur) {
+        historique.push({
+          date: new Date(),
+          auteur: userId,
+          champ,
+          ancienneValeur: entretien[champ],
+          nouvelleValeur,
+          notes
+        });
+      }
+    }
+
+    // Mettre à jour l'entretien
+    Object.assign(entretien, updates);
+    if (historique.length > 0) {
+      entretien.historique = [...(entretien.historique || []), ...historique];
+    }
+
+    return await entretien.save();
   }
 }
 

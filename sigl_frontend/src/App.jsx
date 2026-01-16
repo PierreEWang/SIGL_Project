@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import RegisterPage from './pages/RegisterPage';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
+import AdminDashboard from './pages/dashboard/AdminDashboard';
+import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 
 import CreateJournalPage from './pages/journal/CreateJournalPage';
 import JournalDetailPage from './pages/journal/JournalDetailPage';
@@ -19,6 +21,7 @@ import DocumentCreatePage from './pages/documents/DocumentCreatePage';
 import EntretienPage from './pages/entretien/EntretienPage';
 import PlanificationEntretienPage from './pages/entretien/PlanificationEntretienPage';
 import CreerEntretienPage from './pages/entretien/CreerEntretienPage';
+import DetailEntretienPage from './pages/entretien/DetailEntretienPage';
 
 import DemandeEntretienPage from './pages/entretien/DemandeEntretienPage';
 import MesEntretiensPage from './pages/entretien/MesEntretiensPage';
@@ -36,6 +39,14 @@ function App() {
 
         {/* Espace apprenti */}
         <Route path="/dashboard" element={<StudentDashboard />} />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedAdminRoute>
+              <AdminDashboard />
+            </ProtectedAdminRoute>
+          }
+        />
         <Route path="/journal/create" element={<CreateJournalPage />} />
         <Route path="/journal/:id" element={<JournalDetailPage />} />
 
@@ -55,6 +66,7 @@ function App() {
         <Route path="/entretiens" element={<EntretienPage />} />
         <Route path="/entretien/demander" element={<DemandeEntretienPage />} />
         <Route path="/entretiens/creer" element={<CreerEntretienPage />} />
+        <Route path="/entretiens/:entretienId" element={<DetailEntretienPage />} />
         <Route path="/entretiens/:entretienId/planification" element={<PlanificationEntretienPage />} />
 
         {/* Fallback */}

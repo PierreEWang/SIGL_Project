@@ -43,4 +43,10 @@ router.put('/:entretienId/confirmer', entretienController.confirmerEntretien.bin
  */
 router.put('/:entretienId/annuler', entretienController.annulerEntretien.bind(entretienController));
 
+/**
+ * PUT /api/entretiens/:entretienId
+ * Met à jour un entretien avec historisation
+ */
+router.put('/:entretienId', entretienController.mettreAJourEntretien.bind(entretienController));
+
 module.exports = router;

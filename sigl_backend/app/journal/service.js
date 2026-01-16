@@ -22,6 +22,7 @@ const mapJournalEntryToDto = async (entry) => {
     createdAt: entry.createdAt,
     updatedAt: entry.updatedAt,
     calendarEventId: entry.calendarEventId ?? null,
+    deadline: entry.deadline || null,
     history: entry.history || [],
   };
 
@@ -64,6 +65,7 @@ const createJournalForUser = async (userId, journalPayload) => {
     periodes = [],
     status = 'EN_COURS',
     createdAt,
+    deadline,
     calendarEventId,
     calendarEvent,
     calendar,
@@ -77,6 +79,11 @@ const createJournalForUser = async (userId, journalPayload) => {
     date,
     contenu,
   };
+
+  // Ajouter la deadline si fournie
+  if (deadline) {
+    data.deadline = new Date(deadline);
+  }
 
   // ✅ Création optionnelle d'un événement calendrier (si demandé par le front)
   const calOpt =

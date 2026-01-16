@@ -50,7 +50,23 @@ const entretienSchema = new mongoose.Schema({
   description: {
     type: String,
     maxlength: 2000
-  }
+  },
+
+  // Historique des modifications
+  historique: [{
+    date: {
+      type: Date,
+      default: Date.now
+    },
+    auteur: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Utilisateur'
+    },
+    champ: String,
+    ancienneValeur: mongoose.Schema.Types.Mixed,
+    nouvelleValeur: mongoose.Schema.Types.Mixed,
+    notes: String
+  }]
 }, {
   timestamps: true,
   collection: 'entretiens'

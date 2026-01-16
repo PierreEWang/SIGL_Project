@@ -30,6 +30,13 @@ const JournalEntrySchema = new mongoose.Schema(
       maxlength: 10000,
     },
 
+    // Deadline de formation
+    deadline: {
+      type: Date,
+      required: false,
+      index: true,
+    },
+
     // Historique des modifications
     history: [{
       timestamp: {

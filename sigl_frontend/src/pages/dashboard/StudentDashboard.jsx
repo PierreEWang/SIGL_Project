@@ -109,30 +109,6 @@ const StudentDashboard = () => {
     loadEntretiens();
   }, []);
 
-  // --- Chargement de la soutenance avec bookingService ---
-  useEffect(() => {
-    const loadSoutenance = async () => {
-      try {
-        setSoutenanceLoading(true);
-        setSoutenanceError(null);
-        
-        const result = await bookingService.getMaSoutenance();
-        if (result.success) {
-          setSoutenance(result.data);
-        } else {
-          setSoutenanceError("Impossible de charger votre soutenance pour le moment.");
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement de la soutenance :', error);
-        setSoutenanceError("Impossible de charger votre soutenance pour le moment.");
-      } finally {
-        setSoutenanceLoading(false);
-      }
-    };
-
-    loadSoutenance();
-  }, []);
-
   const formatDate = (value) => {
     if (!value) return '—';
     try {
@@ -320,7 +296,7 @@ const StudentDashboard = () => {
           <section className="bg-white/90 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-6">
             <div>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Entretiens & Soutenances</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Mes entretiens</h2>
                 <Link
                   to="/entretien/demander"
                   className="inline-flex items-center px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition"
@@ -329,19 +305,13 @@ const StudentDashboard = () => {
                 </Link>
               </div>
               
-              {entretiensLoading && soutenanceLoading && (
-                <div className="py-6 text-sm text-gray-500">Chargement des entretiens et soutenances...</div>
+              {entretiensLoading && (
+                <div className="py-6 text-sm text-gray-500">Chargement des entretiens...</div>
               )}
 
               {entretiensError && (
                 <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
                   {entretiensError}
-                </div>
-              )}
-
-              {soutenanceError && (
-                <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                  {soutenanceError}
                 </div>
               )}
 
@@ -353,45 +323,30 @@ const StudentDashboard = () => {
 
               {!entretiensLoading && entretiens.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-md font-medium text-gray-800 mb-3">Mes entretiens</h3>
                   <div className="space-y-3">
                     {entretiens.map((entretien, index) => (
-                      <div key={entretien.id || `entretien-${index}`} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition">
+                      <div 
+                        key={entretien._id || `entretien-${index}`} 
+                        onClick={() => navigate(`/entretiens/${entretien._id}`)}
+                        className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition cursor-pointer"
+                      >
                         <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium text-gray-900">{entretien.titre || 'Entretien'}</p>
-                            <p className="text-sm text-gray-600">{formatDateTime(entretien.dateHeure)}</p>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{entretien.objet || 'Entretien'}</p>
+                            <p className="text-sm text-gray-600">
+                              {entretien.creneau?.debut ? formatDateTime(entretien.creneau.debut) : 'Date non définie'}
+                            </p>
+                            <div className="mt-2 text-xs text-gray-500">
+                              <p>Participants: {entretien.participants?.length || 0}</p>
+                            </div>
                           </div>
                           <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">
-                            {getEntretienStatusLabel(entretien.status)}
+                            {getEntretienStatusLabel(entretien.statut || entretien.status)}
                           </span>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {!soutenanceLoading && soutenance && (
-                <div>
-                  <h3 className="text-md font-medium text-gray-800 mb-3">Ma soutenance</h3>
-                  <div className="border border-gray-200 rounded-lg p-4 bg-purple-50">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-gray-900">Soutenance finale</p>
-                        <p className="text-sm text-gray-600">{formatDateTime(soutenance.dateHeure)}</p>
-                      </div>
-                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-700">
-                        {getSoutenanceStatusLabel(soutenance.status)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!soutenanceLoading && !soutenance && (
-                <div className="py-6 text-sm text-gray-500">
-                  Aucune soutenance programmée pour le moment.
                 </div>
               )}
             </div>

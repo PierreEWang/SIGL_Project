@@ -61,4 +61,20 @@ router.delete(
   userController.deleteUser
 );
 
+// POST /api/users/:id/approve - Valider un utilisateur (admin)
+router.post(
+  '/:id/approve',
+  authenticate,
+  adminOnly(),
+  userController.approveUser
+);
+
+// POST /api/users/:id/reject - Rejeter un utilisateur (admin)
+router.post(
+  '/:id/reject',
+  authenticate,
+  adminOnly(),
+  userController.rejectUser
+);
+
 module.exports = router;

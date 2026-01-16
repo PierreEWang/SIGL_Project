@@ -25,6 +25,9 @@ const CreateJournalPage = () => {
     },
   ]);
 
+  // Deadline du journal
+  const [deadline, setDeadline] = useState('');
+
   // ---------- STATE ÉVÉNEMENT CALENDRIER ----------
   const [calendarEvent, setCalendarEvent] = useState({
     enable: false,
@@ -167,6 +170,7 @@ const CreateJournalPage = () => {
       const payload = {
         periodes: cleanedPeriodes,
         calendarEvent: calendarEvent.enable ? calendarEvent : null,
+        deadline: deadline || null,
       };
 
       const created = await journalService.createJournal(payload);
@@ -496,6 +500,25 @@ const CreateJournalPage = () => {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Deadline */}
+          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Deadline</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date limite de remise (optionnel)
+              </label>
+              <input
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Indiquez une date limite pour la remise de ce journal de formation.
+              </p>
+            </div>
           </div>
 
           <div className="flex justify-end">

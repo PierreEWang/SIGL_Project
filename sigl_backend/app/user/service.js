@@ -97,6 +97,34 @@ const deleteUserAccount = async (userId) => {
   }
 };
 
+const approveUser = async (userId, approvedBy) => {
+  try {
+    const user = await userRepository.updateUserStatus(userId, 'ACTIF', { approvedBy });
+    return { success: true, data: user };
+  } catch (error) {
+    console.error('Service approveUser error:', error);
+    return {
+      success: false,
+      error: 'Échec de la validation de l’utilisateur',
+      details: error.message,
+    };
+  }
+};
+
+const rejectUser = async (userId, rejectionReason) => {
+  try {
+    const user = await userRepository.updateUserStatus(userId, 'REJETE', { rejectionReason });
+    return { success: true, data: user };
+  } catch (error) {
+    console.error('Service rejectUser error:', error);
+    return {
+      success: false,
+      error: 'Échec du rejet de l’utilisateur',
+      details: error.message,
+    };
+  }
+};
+
 const listAllUsers = async () => {
   try {
     const users = await userRepository.listAllUsers();
@@ -120,4 +148,6 @@ module.exports = {
   updateUserInfo,
   deleteUserAccount,
   listAllUsers,
+  approveUser,
+  rejectUser,
 };

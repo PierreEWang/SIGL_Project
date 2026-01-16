@@ -81,7 +81,9 @@ const LoginForm = () => {
           return;
         }
 
-        navigate('/dashboard');
+        const user = res?.data?.user;
+        const destination = user?.role === 'ADMIN' ? '/admin' : '/dashboard';
+        navigate(destination);
       } else {
         if (!mfaCode.trim()) {
           setErrors((prev) => ({
@@ -98,7 +100,9 @@ const LoginForm = () => {
           formData.rememberMe
         );
 
-        navigate('/dashboard');
+        const user = authService.getCurrentUser();
+        const destination = user?.role === 'ADMIN' ? '/admin' : '/dashboard';
+        navigate(destination);
       }
     } catch (err) {
       console.error('Erreur de connexion :', err);

@@ -129,6 +129,24 @@ class AuthController {
       // Reset tentatives
       await authRepository.resetFailedAttempts(authRecord.userId);
 
+      // Blocage si compte non actif
+      if (authRecord.user.status && authRecord.user.status !== 'ACTIF') {
+        const statusMessage =
+          authRecord.user.status === 'EN_ATTENTE'
+            ? 'Compte en attente de validation par un administrateur'
+            : 'Compte inactif. Contacte un administrateur.';
+
+        console.log(
+          `Login blocked: ${authRecord.user.email} status=${authRecord.user.status} - ${new Date().toISOString()}`
+        );
+
+        return res.status(403).json({
+          success: false,
+          message: statusMessage,
+          error: 'ACCOUNT_NOT_ACTIVE',
+        });
+      }
+
       // MFA activé ?
       if (authRecord.user.mfaEnabled) {
         try {

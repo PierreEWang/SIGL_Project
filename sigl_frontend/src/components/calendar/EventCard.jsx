@@ -43,7 +43,12 @@ const EventCard = ({ event, isPreview = false, size = 'medium' }) => {
   const handleClick = (e) => {
     e.stopPropagation();
     if (!isPreview) {
-      navigate(`/calendar/event/${event.id}`);
+      // Si c'est un événement entretien, naviguer vers la page d'entretien
+      if (event.entretienId) {
+        navigate(`/entretiens/${event.entretienId}`);
+      } else {
+        navigate(`/calendar/event/${event.id}`);
+      }
     }
   };
 
