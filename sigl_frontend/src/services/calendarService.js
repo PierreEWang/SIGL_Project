@@ -50,11 +50,61 @@ class CalendarService {
 
   /**
    * Récupère un événement par son ID
+   * Handles different event types: entretien, soutenance, regular calendar event
    */
   static async getEventById(id) {
     try {
+      // Handle entretien events
+      if (id.startsWith('entretien-')) {
+        const entretienId = id.replace('entretien-', '');
+        const response = await calendarApi.get(`/entretiens/${entretienId}`);
+
+        if (response.data.success) {
+          const entretien = response.data.data;
+          return {
+            id: id,
+            title: entretien.objet || 'Entretien',
+            date: entretien.creneau?.debut ? entretien.creneau.debut.split('T')[0] : null,
+            time: entretien.creneau?.debut ? new Date(entretien.creneau.debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : null,
+            category: 'entretien',
+            description: `Participants: ${entretien.participants?.map(p => p.nom || p.email).join(', ') || 'Non définis'}\n\nStatut: ${entretien.statut || 'En attente'}`,
+            location: entretien.lieu || null,
+            status: entretien.statut,
+            type: 'entretien',
+            originalData: entretien
+          };
+        } else {
+          throw new Error(response.data.error || 'Entretien non trouvé');
+        }
+      }
+
+      // Handle soutenance events
+      if (id.startsWith('soutenance-')) {
+        const soutenanceId = id.replace('soutenance-', '');
+        const response = await calendarApi.get('/soutenances/ma-soutenance');
+
+        if (response.data.success && response.data.data) {
+          const soutenance = response.data.data;
+          return {
+            id: id,
+            title: 'Soutenance',
+            date: soutenance.dateHeure ? soutenance.dateHeure.split('T')[0] : null,
+            time: soutenance.dateHeure ? new Date(soutenance.dateHeure).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : null,
+            category: 'soutenance',
+            description: `Salle: ${soutenance.salle || 'Non définie'}\n\nStatut: ${soutenance.etat || soutenance.status || 'Planifiée'}`,
+            location: soutenance.salle || null,
+            status: soutenance.etat || soutenance.status,
+            type: 'soutenance',
+            originalData: soutenance
+          };
+        } else {
+          throw new Error(response.data.error || 'Soutenance non trouvée');
+        }
+      }
+
+      // Handle regular calendar events
       const response = await calendarApi.get(`/calendar/events/${id}`);
-      
+
       if (response.data.success) {
         return response.data.data;
       } else {
@@ -86,7 +136,7 @@ class CalendarService {
       }
     } catch (error) {
       console.error('Erreur getCategories:', error);
-      return ['réunion', 'rendez-vous', 'culturel', 'formation'];
+      return ['réunion', 'rendez-vous', 'culturel', 'formation', 'entretien', 'soutenance'];
     }
   }
 
@@ -150,15 +200,60 @@ class CalendarService {
 
   /**
    * Récupère les événements de l'utilisateur connecté
+   * Inclut les événements personnels, entretiens et soutenances
    */
   static async getMyEvents() {
     try {
-      const response = await calendarApi.get('/calendar/my-events');
-      if (response.data.success) {
-        return response.data.data;
-      } else {
-        throw new Error(response.data.error || 'Erreur lors de la récupération des événements');
+      // Fetch all event sources in parallel
+      const [eventsResponse, entretiensResponse, soutenanceResponse] = await Promise.allSettled([
+        calendarApi.get('/calendar/my-events'),
+        calendarApi.get('/entretiens/mes-entretiens'),
+        calendarApi.get('/soutenances/ma-soutenance')
+      ]);
+
+      let allEvents = [];
+
+      // Add calendar events
+      if (eventsResponse.status === 'fulfilled' && eventsResponse.value.data.success) {
+        allEvents = [...(eventsResponse.value.data.data || [])];
       }
+
+      // Add entretiens as calendar events
+      if (entretiensResponse.status === 'fulfilled' && entretiensResponse.value.data.success) {
+        const entretiens = entretiensResponse.value.data.data || [];
+        const entretienEvents = entretiens.map(entretien => ({
+          id: `entretien-${entretien.id || entretien._id}`,
+          title: entretien.objet || 'Entretien',
+          date: entretien.creneau?.debut ? entretien.creneau.debut.split('T')[0] : (entretien.debut ? entretien.debut.split('T')[0] : null),
+          time: entretien.creneau?.debut ? new Date(entretien.creneau.debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : null,
+          category: 'entretien',
+          description: `Entretien avec ${entretien.participants?.length || 0} participant(s)`,
+          status: entretien.statut || entretien.status,
+          type: 'entretien',
+          originalData: entretien
+        })).filter(e => e.date); // Only include events with valid dates
+        allEvents = [...allEvents, ...entretienEvents];
+      }
+
+      // Add soutenance as calendar event
+      if (soutenanceResponse.status === 'fulfilled' && soutenanceResponse.value.data.success) {
+        const soutenance = soutenanceResponse.value.data.data;
+        if (soutenance && soutenance.dateHeure) {
+          allEvents.push({
+            id: `soutenance-${soutenance.id || soutenance._id}`,
+            title: 'Soutenance',
+            date: soutenance.dateHeure.split('T')[0],
+            time: new Date(soutenance.dateHeure).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+            category: 'soutenance',
+            description: `Salle: ${soutenance.salle || 'Non définie'}`,
+            status: soutenance.etat || soutenance.status,
+            type: 'soutenance',
+            originalData: soutenance
+          });
+        }
+      }
+
+      return allEvents;
     } catch (error) {
       console.error('Erreur getMyEvents:', error);
       throw error;
@@ -276,6 +371,18 @@ class CalendarService {
         text: 'text-green-700',
         border: 'border-green-300',
         dot: 'bg-green-500'
+      },
+      'entretien': {
+        bg: 'bg-yellow-50',
+        text: 'text-yellow-700',
+        border: 'border-yellow-300',
+        dot: 'bg-yellow-500'
+      },
+      'soutenance': {
+        bg: 'bg-red-50',
+        text: 'text-red-700',
+        border: 'border-red-300',
+        dot: 'bg-red-500'
       }
     };
 

@@ -53,9 +53,16 @@ function App() {
 
         {/* Entretiens */}
         <Route path="/entretiens" element={<EntretienPage />} />
+        <Route path="/entretien/demande" element={<DemandeEntretienPage />} />
         <Route path="/entretien/demander" element={<DemandeEntretienPage />} />
+        <Route path="/entretien/mes-entretiens" element={<MesEntretiensPage />} />
         <Route path="/entretiens/creer" element={<CreerEntretienPage />} />
         <Route path="/entretiens/:entretienId/planification" element={<PlanificationEntretienPage />} />
+
+        {/* Soutenances */}
+        <Route path="/soutenance/planifier" element={<PlanifierSoutenancePage />} />
+        <Route path="/soutenance/ma-soutenance" element={<MaSoutenancePage />} />
+        <Route path="/soutenance/gestion" element={<GestionSoutenancesPage />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -85,7 +85,7 @@ const DemandeEntretienPage = () => {
             );
 
             alert('Demande d\'entretien envoyée avec succès !');
-            navigate('/entretien/liste');
+            navigate('/entretien/mes-entretiens');
         } catch (error) {
             setErrors({ submit: error.response?.data?.error || 'Erreur lors de la demande' });
         } finally {
