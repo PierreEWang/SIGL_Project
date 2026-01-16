@@ -3,7 +3,7 @@ import api from './Api';
 const bookingService = {
     // === ENTRETIENS ===
     demanderEntretien: async (objet, debut, fin, participantIds) => {
-        const response = await api.post('/entretiens', { objet, debut, fin, participantIds });
+        const response = await api.post('/entretiens', { objet, debut, fin, participants: participantIds });
         return response.data;
     },
     getMesEntretiens: async () => {

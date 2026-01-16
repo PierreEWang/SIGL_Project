@@ -80,8 +80,8 @@ const getEventById = (req, res) => {
  */
 const getCategories = (req, res) => {
   try {
-    const categories = ['réunion', 'rendez-vous', 'culturel', 'formation'];
-    
+    const categories = ['réunion', 'rendez-vous', 'culturel', 'formation', 'entretien', 'soutenance'];
+
     res.status(200).json({
       success: true,
       data: categories,

@@ -5,7 +5,6 @@ import journalService from '../../services/journalService';
 import bookingService from '../../services/bookingService';
 import CalendarPage from '../calendar/CalendarPage';
 import DocumentsPage from '../documents/DocumentsPage';
-import EntretienPage from '../entretien/EntretienPage';
 
 /**
  * Dashboard principal de l'apprenti
@@ -317,25 +316,153 @@ const StudentDashboard = () => {
 
       case 'entretiens':
         return (
-          <section className="bg-white/90 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-6">
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Entretiens & Soutenances</h2>
-                <Link
-                  to="/entretien/demander"
-                  className="inline-flex items-center px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition"
-                >
-                  + Demander un entretien
-                </Link>
+          <div className="space-y-6">
+            {/* Section Entretiens */}
+            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Mes Entretiens
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Planification et suivi de vos entretiens.
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <Link
+                    to="/entretien/demande"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    Demander un entretien
+                  </Link>
+                  <Link
+                    to="/entretien/mes-entretiens"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    Voir tous mes entretiens
+                  </Link>
+                </div>
               </div>
-              
-              {entretiensLoading && soutenanceLoading && (
-                <div className="py-6 text-sm text-gray-500">Chargement des entretiens et soutenances...</div>
+
+              {entretiensLoading && (
+                <div className="py-6 text-sm text-gray-500">
+                  Chargement de vos entretiens...
+                </div>
               )}
 
               {entretiensError && (
                 <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
                   {entretiensError}
+                </div>
+              )}
+
+              {!entretiensLoading && !entretiensError && entretiens.length === 0 && (
+                <div className="py-10 text-center text-sm text-gray-500">
+                  Aucun entretien planifié pour le moment.
+                  <br />
+                  Cliquez sur «&nbsp;Demander un entretien&nbsp;» pour en planifier un.
+                </div>
+              )}
+
+              {!entretiensLoading && !entretiensError && entretiens.length > 0 && (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">
+                          Objet
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">
+                          Date et heure
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">
+                          Participants
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">
+                          Statut
+                        </th>
+                        <th className="px-4 py-2" />
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {entretiens.slice(0, 3).map((entretien, index) => (
+                        <tr key={entretien.id || entretien._id || `entretien-${index}`} className="hover:bg-gray-50">
+                          <td className="px-4 py-2 whitespace-nowrap text-gray-700 font-medium">
+                            {entretien.objet || 'Entretien'}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-gray-700">
+                            {formatDateTime(entretien.debut)}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-gray-700">
+                            {entretien.participants?.length || 0} participant(s)
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap">
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              entretien.status === 'CONFIRME'
+                                ? 'bg-green-50 text-green-700'
+                                : entretien.status === 'ANNULE'
+                                ? 'bg-red-50 text-red-700'
+                                : 'bg-yellow-50 text-yellow-700'
+                            }`}>
+                              {getEntretienStatusLabel(entretien.status)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-right whitespace-nowrap">
+                            <Link
+                              to="/entretien/mes-entretiens"
+                              className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                            >
+                              Voir détails
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {entretiens.length > 3 && (
+                    <div className="mt-3 text-center">
+                      <Link
+                        to="/entretien/mes-entretiens"
+                        className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                      >
+                        Voir tous les entretiens ({entretiens.length})
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* Section Soutenance */}
+            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Ma Soutenance
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Informations sur votre soutenance de fin d'études.
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <Link
+                    to="/soutenance/planifier"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    Planifier
+                  </Link>
+                  <Link
+                    to="/soutenance/ma-soutenance"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    Voir ma soutenance
+                  </Link>
+                </div>
+              </div>
+
+              {soutenanceLoading && (
+                <div className="py-6 text-sm text-gray-500">
+                  Chargement de votre soutenance...
                 </div>
               )}
 
@@ -345,57 +472,65 @@ const StudentDashboard = () => {
                 </div>
               )}
 
-              {!entretiensLoading && entretiens.length === 0 && (
-                <div className="py-6 text-sm text-gray-500 mb-6">
-                  Aucun entretien programmé pour le moment.
+              {!soutenanceLoading && !soutenanceError && !soutenance && (
+                <div className="py-10 text-center text-sm text-gray-500">
+                  Aucune soutenance planifiée pour le moment.
+                  <br />
+                  Cliquez sur «&nbsp;Planifier&nbsp;» pour organiser votre soutenance.
                 </div>
               )}
 
-              {!entretiensLoading && entretiens.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-md font-medium text-gray-800 mb-3">Mes entretiens</h3>
-                  <div className="space-y-3">
-                    {entretiens.map((entretien, index) => (
-                      <div key={entretien.id || `entretien-${index}`} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium text-gray-900">{entretien.titre || 'Entretien'}</p>
-                            <p className="text-sm text-gray-600">{formatDateTime(entretien.dateHeure)}</p>
-                          </div>
-                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">
-                            {getEntretienStatusLabel(entretien.status)}
-                          </span>
+              {!soutenanceLoading && !soutenanceError && soutenance && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900 mb-2">Informations générales</h3>
+                      <dl className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <dt className="text-gray-500">Date et heure :</dt>
+                          <dd className="text-gray-900 font-medium">
+                            {formatDateTime(soutenance.dateHeure)}
+                          </dd>
                         </div>
+                        <div className="flex justify-between">
+                          <dt className="text-gray-500">Salle :</dt>
+                          <dd className="text-gray-900">{soutenance.salle || '—'}</dd>
+                        </div>
+                        <div className="flex justify-between">
+                          <dt className="text-gray-500">Statut :</dt>
+                          <dd>
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              soutenance.status === 'VALIDEE'
+                                ? 'bg-green-50 text-green-700'
+                                : soutenance.status === 'ANNULEE'
+                                ? 'bg-red-50 text-red-700'
+                                : 'bg-blue-50 text-blue-700'
+                            }`}>
+                              {getSoutenanceStatusLabel(soutenance.status)}
+                            </span>
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900 mb-2">Jury</h3>
+                      <div className="space-y-1 text-sm">
+                        {soutenance.jury && soutenance.jury.length > 0 ? (
+                          soutenance.jury.map((membre, index) => (
+                            <div key={membre.id || membre.email || `jury-member-${index}`} className="text-gray-700">
+                              {membre.nom || membre.email || 'Membre du jury'}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-gray-500">Aucun membre du jury assigné</div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {!soutenanceLoading && soutenance && (
-                <div>
-                  <h3 className="text-md font-medium text-gray-800 mb-3">Ma soutenance</h3>
-                  <div className="border border-gray-200 rounded-lg p-4 bg-purple-50">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-gray-900">Soutenance finale</p>
-                        <p className="text-sm text-gray-600">{formatDateTime(soutenance.dateHeure)}</p>
-                      </div>
-                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-700">
-                        {getSoutenanceStatusLabel(soutenance.status)}
-                      </span>
                     </div>
                   </div>
                 </div>
               )}
-
-              {!soutenanceLoading && !soutenance && (
-                <div className="py-6 text-sm text-gray-500">
-                  Aucune soutenance programmée pour le moment.
-                </div>
-              )}
-            </div>
-          </section>
+            </section>
+          </div>
         );
 
       case 'notifications':
